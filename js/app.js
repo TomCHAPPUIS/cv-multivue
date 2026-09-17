@@ -5,11 +5,15 @@ let activeFilter = null;
 // Presets de couleurs sélectionnables via CV.theme.preset dans data.js, avec
 // possibilité de surcharger des couleurs individuelles via CV.theme.overrides.
 
+// Chaque preset doit rester reconnaissable même sur les zones presque
+// noires/blanches (sidebar sombre, fond clair) — pas seulement sur
+// l'accent, peu présent à l'écran. "mono" est volontairement sans
+// aucune teinte (saturation nulle) pour trancher net avec les 3 autres.
 const THEME_PRESETS = {
   ambre: { accent: '#e06b3a', bg: '#f4f2ee', sidebarBg: '#1a1a18', sidebarText: '#e2ddd5' },
-  ocean: { accent: '#2563eb', bg: '#f2f5f8', sidebarBg: '#0f1c2e', sidebarText: '#dbe6f2' },
-  foret: { accent: '#059669', bg: '#f3f6f2', sidebarBg: '#12201a', sidebarText: '#dcece2' },
-  mono:  { accent: '#52525b', bg: '#f5f5f4', sidebarBg: '#1c1c1c', sidebarText: '#e5e5e5' }
+  ocean: { accent: '#2563eb', bg: '#eaf1fa', sidebarBg: '#0b2540', sidebarText: '#d7e6f5' },
+  foret: { accent: '#15803d', bg: '#eaf5ec', sidebarBg: '#0e2818', sidebarText: '#d7ecdd' },
+  mono:  { accent: '#525252', bg: '#f2f2f2', sidebarBg: '#181818', sidebarText: '#e4e4e4' }
 };
 
 function applyTheme() {
