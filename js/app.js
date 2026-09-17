@@ -2,6 +2,18 @@ let currentView = 'timeline';
 let activeFilter = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  let errors;
+  try {
+    errors = validateCV();
+  } catch (e) {
+    renderValidationErrors([`Erreur inattendue en lisant data.js : ${e.message}`]);
+    return;
+  }
+  if (errors.length) {
+    renderValidationErrors(errors);
+    return;
+  }
+
   renderProfil();
   renderLangues();
   renderView('timeline');
@@ -15,6 +27,72 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// ── Validation ───────────────────────────────────────────────────────────────
+// Vérifie data.js au chargement pour afficher une erreur lisible plutôt
+// qu'une page blanche silencieuse — utile pour repérer un id de taxonomie
+// mal orthographié, une entrée sans id, etc.
+
+function validateCV() {
+  const errors = [];
+  if (typeof CV === 'undefined') {
+    return ["L'objet CV est introuvable — vérifiez que js/data.js est bien chargé avant js/app.js dans index.html."];
+  }
+  if (!CV.profil || !CV.profil.nom) errors.push('CV.profil.nom est requis.');
+
+  if (!CV.taxonomie) {
+    errors.push('CV.taxonomie est manquant.');
+    return errors;
+  }
+  ['domaines', 'types', 'competences'].forEach(key => {
+    if (!CV.taxonomie[key] || typeof CV.taxonomie[key] !== 'object') {
+      errors.push(`CV.taxonomie.${key} est manquant ou n'est pas un objet.`);
+    }
+  });
+
+  const seenIds = new Set();
+  const collections = { experiences: CV.experiences, formations: CV.formations, projets: CV.projets };
+  Object.entries(collections).forEach(([name, list]) => {
+    if (!Array.isArray(list)) {
+      errors.push(`CV.${name} doit être un tableau (trouvé : ${typeof list}).`);
+      return;
+    }
+    list.forEach((item, i) => {
+      const label = item.id ? `"${item.id}"` : `#${i}`;
+      if (!item.id) errors.push(`CV.${name}[${i}] : id manquant.`);
+      else if (seenIds.has(item.id)) errors.push(`CV.${name} : id "${item.id}" utilisé plusieurs fois.`);
+      else seenIds.add(item.id);
+
+      if (!item.titre) errors.push(`CV.${name} ${label} : titre manquant.`);
+      if (item.debut == null) errors.push(`CV.${name} ${label} : debut manquant.`);
+
+      if (item.type && CV.taxonomie.types && !CV.taxonomie.types[item.type]) {
+        errors.push(`CV.${name} ${label} : type "${item.type}" absent de CV.taxonomie.types.`);
+      }
+      (item.domaines || []).forEach(d => {
+        if (CV.taxonomie.domaines && !CV.taxonomie.domaines[d]) {
+          errors.push(`CV.${name} ${label} : domaine "${d}" absent de CV.taxonomie.domaines.`);
+        }
+      });
+      (item.competences || []).forEach(comp => {
+        if (CV.taxonomie.competences && !CV.taxonomie.competences[comp]) {
+          errors.push(`CV.${name} ${label} : compétence "${comp}" absente de CV.taxonomie.competences.`);
+        }
+      });
+    });
+  });
+
+  return errors;
+}
+
+function renderValidationErrors(errors) {
+  document.body.innerHTML = `
+    <div class="cv-error-screen">
+      <h1>data.js contient des erreurs</h1>
+      <p>Le site ne peut pas s'afficher tant que ces points ne sont pas corrigés :</p>
+      <ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul>
+    </div>`;
+}
 
 // ── Data helpers ────────────────────────────────────────────────────────────
 
