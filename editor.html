@@ -12,9 +12,14 @@
   <header class="editor-header">
     <div>
       <h1>Éditeur de données</h1>
-      <p class="hint">Modifie tes données puis télécharge <code>data.js</code> — rien n'est envoyé nulle part, tout reste dans ce navigateur tant que tu ne télécharges pas.</p>
+      <p class="hint">Modifie tes données puis télécharge <code>data.js</code> — rien n'est envoyé nulle part. Ta saisie est sauvegardée automatiquement dans ce navigateur (elle survit à un rechargement de la page), jusqu'à ce que tu cliques sur Réinitialiser.</p>
     </div>
     <div class="editor-actions">
+      <label class="btn-secondary btn-file">
+        Importer un data.js
+        <input type="file" id="btn-import" accept=".js,text/javascript,application/json,.json" hidden>
+      </label>
+      <button type="button" id="btn-reset" class="btn-secondary">Réinitialiser</button>
       <button type="button" id="btn-preview" class="btn-secondary">Prévisualiser</button>
       <button type="button" id="btn-download" class="btn-primary">Télécharger data.js</button>
     </div>

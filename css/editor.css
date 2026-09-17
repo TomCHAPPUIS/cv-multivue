@@ -32,6 +32,7 @@
 .btn-primary:hover { opacity: 0.9; }
 .btn-secondary { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-file { display: inline-flex; align-items: center; cursor: pointer; }
 
 .hint { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
 

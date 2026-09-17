@@ -41,18 +41,24 @@ function arrToObj(arr) {
 
 // ── État ─────────────────────────────────────────────────────────────────────
 
+const DRAFT_KEY = 'cvEditorDraft';
+
 function defaultState() {
   return {
     theme: { preset: 'ambre', overrides: {} },
     profil: { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: { mode: 'mailto', email: '', formAction: '' },
-    taxonomie: { domaines: [], types: [], competences: [] },
+    taxonomie: { domaines: {}, types: {}, competences: {} },
     experiences: [], formations: [], projets: [], langues: []
   };
 }
 
-function loadInitialState() {
-  const src = (typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState();
+// Convertit un objet CV "au format data.js" (taxonomie indexée par id) vers
+// la forme interne de l'éditeur (taxonomie en tableaux, pour add/remove/CRUD
+// facile). Point d'entrée commun pour : les données du site (CV), un
+// brouillon relu depuis localStorage, ou un fichier importé.
+function normalizeState(src) {
+  src = src || {};
   return {
     theme: src.theme || { preset: 'ambre', overrides: {} },
     profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
@@ -67,6 +73,49 @@ function loadInitialState() {
     projets: src.projets || [],
     langues: src.langues || []
   };
+}
+
+function readDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveDraft() {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(toOutputCV())); } catch (e) { /* stockage indisponible, tant pis */ }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+}
+
+// Priorité au brouillon sauvegardé dans ce navigateur (pour ne jamais perdre
+// une saisie en cours entre deux visites) ; à défaut, les données publiées
+// sur ce site (CV, depuis data.js) ; à défaut, un état vide.
+function loadInitialState() {
+  const draft = readDraft();
+  const src = draft || ((typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState());
+  return normalizeState(src);
+}
+
+function loadFromPublished() {
+  const src = (typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState();
+  return normalizeState(src);
+}
+
+function importFromText(text) {
+  try {
+    const imported = new Function(`${text}\nreturn CV;`)();
+    if (!imported || typeof imported !== 'object') throw new Error("aucun objet CV trouvé dans le fichier.");
+    state = normalizeState(imported);
+    rebuildAllSections();
+    updateOutput();
+  } catch (e) {
+    alert("Impossible d'importer ce fichier : " + e.message);
+  }
 }
 
 function toOutputCV() {
@@ -105,6 +154,7 @@ function allEntryIds() {
 // ── Sortie live (validation + code généré) ─────────────────────────────────
 
 function updateOutput() {
+  saveDraft();
   document.getElementById('output').value = generateDataJs();
 
   const errors = validateCV(toOutputCV());
@@ -583,9 +633,7 @@ function openPreview() {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
-  state = loadInitialState();
-
+function rebuildAllSections() {
   buildThemeSection();
   buildProfilSection();
   buildContactSection();
@@ -594,8 +642,30 @@ document.addEventListener('DOMContentLoaded', () => {
   buildEntriesSection('formations');
   buildEntriesSection('projets');
   buildLanguesSection();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  state = loadInitialState();
+  rebuildAllSections();
   updateOutput();
 
   document.getElementById('btn-preview').addEventListener('click', openPreview);
   document.getElementById('btn-download').addEventListener('click', downloadDataJs);
+
+  document.getElementById('btn-import').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => importFromText(reader.result);
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm("Effacer le brouillon sauvegardé dans ce navigateur et repartir des données publiées sur ce site ?")) return;
+    clearDraft();
+    state = loadFromPublished();
+    rebuildAllSections();
+    updateOutput();
+  });
 });

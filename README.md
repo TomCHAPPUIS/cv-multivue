@@ -34,7 +34,13 @@ domaines et compétences concernés.
      formulaire, cliquez sur **Prévisualiser** pour voir le rendu en
      direct, puis **Télécharger data.js** et remplacez `js/data.js` par le
      fichier téléchargé. Rien n'est envoyé nulle part : tout reste dans
-     votre navigateur tant que vous ne téléchargez pas.
+     votre navigateur. Votre saisie est **sauvegardée automatiquement**
+     dans ce navigateur (survit à un rechargement de page) jusqu'à ce que
+     vous cliquiez sur **Réinitialiser**. Le bouton **Importer un
+     data.js** permet de recharger un fichier existant (le vôtre, ou celui
+     d'une autre instance) dans le formulaire — pratique pour tester
+     l'éditeur sur la démo publique avec vos propres données sans les
+     ressaisir.
    - **Édition directe** : ouvrez `js/data.js` et remplacez le contenu
      d'exemple par le vôtre (voir "Modèle de données" ci-dessous — chaque
      section du fichier est commentée). Une erreur de syntaxe ou une
