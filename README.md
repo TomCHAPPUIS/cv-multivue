@@ -60,8 +60,10 @@ couches :
   `overrides: { accent: "#2563eb" }`) — clés disponibles : `accent`, `bg`,
   `sidebarBg`, `sidebarText` (codes hexadécimaux).
 - **`CV.profil`** — votre identité publique (nom, titre, photo, ville,
-  bio), affichée dans la barre latérale. Volontairement **aucun
-  téléphone/email ici** — voir `CV.contact` ci-dessous.
+  pays, bio), affichée dans la barre latérale. `photo` accepte une URL,
+  un chemin relatif, ou une image intégrée directement (data URI générée
+  par `editor.html`). Volontairement **aucun téléphone/email ici** — voir
+  `CV.contact` ci-dessous.
 - **`CV.contact`** — comment on vous contacte, sans exposer votre adresse
   en clair dans le code de la page (évite le moissonnage automatique une
   fois le site en ligne). Deux modes au choix :

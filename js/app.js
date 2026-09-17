@@ -315,11 +315,13 @@ function renderProfil() {
     ? `<img class="profile-photo" src="${p.photo}" alt="${p.nom}">`
     : '';
 
+  const lieu = [p.ville, p.pays].filter(Boolean).join(', ');
+
   document.getElementById('profile-header').innerHTML = `
     ${photo}
     <h1>${p.nom}</h1>
     <p class="titre-pro">${p.titre || ''}${p.sousTitre ? `<br><em>${p.sousTitre}</em>` : ''}</p>
-    ${p.adresse ? `<p class="lieu">${p.adresse}</p>` : ''}`;
+    ${lieu ? `<p class="lieu">${lieu}</p>` : ''}`;
 
   renderContact();
 }

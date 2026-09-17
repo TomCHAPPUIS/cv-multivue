@@ -44,7 +44,7 @@ function arrToObj(arr) {
 function defaultState() {
   return {
     theme: { preset: 'ambre', overrides: {} },
-    profil: { nom: '', titre: '', sousTitre: '', photo: '', adresse: '', bio: '' },
+    profil: { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: { mode: 'mailto', email: '', formAction: '' },
     taxonomie: { domaines: [], types: [], competences: [] },
     experiences: [], formations: [], projets: [], langues: []
@@ -55,7 +55,7 @@ function loadInitialState() {
   const src = (typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState();
   return {
     theme: src.theme || { preset: 'ambre', overrides: {} },
-    profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', adresse: '', bio: '' },
+    profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: src.contact || { mode: 'mailto', email: '', formAction: '' },
     taxonomie: {
       domaines: objToArr(src.taxonomie && src.taxonomie.domaines),
@@ -149,17 +149,55 @@ function textareaField(id, label, value, placeholder = '') {
   return `<label class="field"><span>${label}</span><textarea id="${id}" rows="3" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value)}</textarea></label>`;
 }
 
+const PAYS_LIST = [
+  'Afrique du Sud', 'Algérie', 'Allemagne', 'Argentine', 'Australie', 'Autriche',
+  'Belgique', 'Bénin', 'Brésil', 'Bulgarie', 'Burkina Faso', 'Cameroun', 'Canada',
+  'Chili', 'Chine', 'Colombie', "Côte d'Ivoire", 'Croatie', 'Danemark', 'Égypte',
+  'Émirats arabes unis', 'Espagne', 'États-Unis', 'Éthiopie', 'Finlande', 'France',
+  'Gabon', 'Ghana', 'Grèce', 'Hongrie', 'Inde', 'Indonésie', 'Irlande', 'Islande',
+  'Israël', 'Italie', 'Japon', 'Kenya', 'Liban', 'Luxembourg', 'Madagascar',
+  'Malaisie', 'Mali', 'Maroc', 'Mexique', 'Niger', 'Nigéria', 'Norvège',
+  'Nouvelle-Zélande', 'Pakistan', 'Pays-Bas', 'Pérou', 'Philippines', 'Pologne',
+  'Portugal', 'République démocratique du Congo', 'République tchèque', 'Roumanie',
+  'Royaume-Uni', 'Russie', 'Rwanda', 'Arabie saoudite', 'Sénégal', 'Serbie',
+  'Singapour', 'Slovaquie', 'Slovénie', 'Suède', 'Suisse', 'Thaïlande', 'Togo',
+  'Tunisie', 'Turquie', 'Ukraine', 'Vietnam'
+];
+
 function buildProfilSection() {
   const c = document.getElementById('section-profil');
   const p = state.profil;
+  const paysConnu = PAYS_LIST.includes(p.pays);
   c.innerHTML = `
     <h2>Identité publique</h2>
     <p class="hint">Ce que vous accepteriez de voir sur un réseau social. Aucun téléphone/email ici — voir la section Contact.</p>
     ${textField('p-nom', 'Nom', p.nom)}
     ${textField('p-titre', 'Titre', p.titre)}
     ${textField('p-soustitre', 'Sous-titre', p.sousTitre)}
-    ${textField('p-photo', 'Photo (URL ou chemin relatif)', p.photo, 'images/moi.jpg')}
-    ${textField('p-adresse', 'Ville', p.adresse)}
+
+    <div class="field">
+      <span>Photo</span>
+      <div class="photo-picker">
+        <img class="photo-preview" id="p-photo-preview" src="${escapeHtml(p.photo)}" alt="" ${p.photo ? '' : 'hidden'}>
+        <div class="photo-picker-controls">
+          <input type="file" id="p-photo-file" accept="image/*">
+          <input type="text" id="p-photo" value="${escapeHtml(p.photo)}" placeholder="images/moi.jpg ou URL, ou choisissez un fichier">
+        </div>
+      </div>
+      <p class="hint">Un fichier choisi ici est intégré directement dans data.js (pratique, mais alourdit le fichier — préférez une photo déjà compressée). Vous pouvez sinon coller une URL/chemin si l'image est hébergée ailleurs.</p>
+    </div>
+
+    ${textField('p-ville', 'Ville', p.ville)}
+    <label class="field">
+      <span>Pays</span>
+      <select id="p-pays">
+        <option value="">—</option>
+        ${PAYS_LIST.map(pays => `<option value="${escapeHtml(pays)}" ${p.pays === pays ? 'selected' : ''}>${escapeHtml(pays)}</option>`).join('')}
+        <option value="__autre__" ${p.pays && !paysConnu ? 'selected' : ''}>Autre…</option>
+      </select>
+    </label>
+    <div id="p-pays-autre-wrap">${(p.pays && !paysConnu) ? textField('p-pays-autre', 'Précisez le pays', p.pays) : ''}</div>
+
     ${textareaField('p-bio', 'Bio courte', p.bio)}`;
 
   const bind = (id, key) => document.getElementById(id).addEventListener('input', (e) => {
@@ -169,9 +207,45 @@ function buildProfilSection() {
   bind('p-nom', 'nom');
   bind('p-titre', 'titre');
   bind('p-soustitre', 'sousTitre');
-  bind('p-photo', 'photo');
-  bind('p-adresse', 'adresse');
+  bind('p-ville', 'ville');
   bind('p-bio', 'bio');
+
+  const preview = document.getElementById('p-photo-preview');
+  const setPhoto = (value) => {
+    state.profil.photo = value;
+    document.getElementById('p-photo').value = value;
+    if (value) { preview.src = value; preview.hidden = false; } else { preview.hidden = true; }
+    updateOutput();
+  };
+  document.getElementById('p-photo').addEventListener('input', (e) => setPhoto(e.target.value));
+  document.getElementById('p-photo-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result);
+    reader.readAsDataURL(file);
+  });
+
+  const paysAutreWrap = document.getElementById('p-pays-autre-wrap');
+  document.getElementById('p-pays').addEventListener('change', (e) => {
+    if (e.target.value === '__autre__') {
+      paysAutreWrap.innerHTML = textField('p-pays-autre', 'Précisez le pays', '');
+      document.getElementById('p-pays-autre').addEventListener('input', (ev) => {
+        state.profil.pays = ev.target.value;
+        updateOutput();
+      });
+      state.profil.pays = '';
+    } else {
+      paysAutreWrap.innerHTML = '';
+      state.profil.pays = e.target.value;
+    }
+    updateOutput();
+  });
+  const autreInput = document.getElementById('p-pays-autre');
+  if (autreInput) autreInput.addEventListener('input', (e) => {
+    state.profil.pays = e.target.value;
+    updateOutput();
+  });
 }
 
 // ── Contact ──────────────────────────────────────────────────────────────────
@@ -224,7 +298,7 @@ function buildTaxonomieSection() {
   const c = document.getElementById('section-taxonomie');
   c.innerHTML = `
     <h2>Taxonomie</h2>
-    <p class="hint">Vos propres catégories. L'identifiant (petit texte gris) est généré automatiquement à la création et sert de référence stable dans vos entrées — pour le changer, supprimez l'entrée et recréez-la.</p>
+    <p class="hint">Vos propres catégories, utilisées comme filtres dans les cases à cocher des expériences/formations/projets ci-dessous. Pour renommer une catégorie sans perdre les entrées qui l'utilisent, changez juste son libellé (la référence interne reste stable) ; pour la remplacer entièrement, supprimez-la et recréez-en une.</p>
     ${Object.keys(TAXO_LABELS).map(kind => `
       <div class="taxo-block">
         <h3>${TAXO_LABELS[kind]}</h3>
@@ -252,7 +326,6 @@ function renderTaxoList(kind) {
   const el = document.getElementById(`taxo-list-${kind}`);
   el.innerHTML = list.map((t, i) => `
     <div class="taxo-row">
-      <span class="taxo-id">${escapeHtml(t.id)}</span>
       <input type="text" data-i="${i}" data-f="label" value="${escapeHtml(t.label)}" placeholder="Libellé">
       ${kind === 'competences'
         ? `<input type="text" data-i="${i}" data-f="groupe" value="${escapeHtml(t.groupe)}" placeholder="Groupe">`
@@ -327,7 +400,6 @@ function renderEntryCards(collection) {
     <div class="entry-card">
       <div class="entry-card-head">
         <strong>${escapeHtml(item.titre) || `${ENTRY_LABELS[collection].slice(0, -1)} #${i + 1}`}</strong>
-        <span class="taxo-id">${escapeHtml(item.id)}</span>
         <button type="button" class="btn-remove" data-i="${i}">✕ Supprimer</button>
       </div>
       ${textField(`e-${collection}-${i}-titre`, 'Titre', item.titre)}
@@ -408,6 +480,15 @@ function renderEntryCards(collection) {
     }
   });
 
+  el.querySelectorAll('.entry-card-head .btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = Number(e.target.dataset.i);
+      state[collection].splice(i, 1);
+      renderEntryCards(collection);
+      updateOutput();
+    });
+  });
+
   // Attribue un id automatique aux seules entrées qui n'en ont pas encore
   // (ex. import de data.js malformé) — ne touche jamais un id déjà présent,
   // sinon rouvrir l'éditeur renommerait silencieusement toutes les entrées.
@@ -418,9 +499,7 @@ function renderEntryCards(collection) {
     if (!card) return;
     const item = state[coll][idx];
     const strong = card.querySelector('.entry-card-head strong');
-    const idBadge = card.querySelector('.entry-card-head .taxo-id');
     if (strong) strong.textContent = item.titre || `${ENTRY_LABELS[coll].slice(0, -1)} #${idx + 1}`;
-    if (idBadge) idBadge.textContent = item.id;
   }
 }
 

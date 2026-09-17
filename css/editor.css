@@ -95,6 +95,26 @@
 .field-checkbox { flex-direction: row; align-items: center; gap: 0.4rem; }
 .field-checkbox span { text-transform: none; font-size: 0.82rem; }
 
+.photo-picker { display: flex; gap: 0.8rem; align-items: center; margin-top: 0.3rem; }
+.photo-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.photo-picker-controls { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 0; }
+.photo-picker-controls input[type="file"] { font-size: 0.78rem; }
+.photo-picker-controls input[type="text"] {
+  font-size: 0.85rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+}
+
 .taxo-block + .taxo-block { margin-top: 0.5rem; }
 .taxo-row {
   display: flex;
@@ -113,16 +133,6 @@
   min-width: 0;
 }
 .taxo-row input[type="color"] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 5px; }
-.taxo-id {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.1rem 0.4rem;
-  white-space: nowrap;
-}
 
 .btn-add, .btn-remove {
   border: 1px dashed var(--border);

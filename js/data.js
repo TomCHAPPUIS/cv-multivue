@@ -23,8 +23,9 @@ const CV = {
     nom: "Alex Dupont",
     titre: "Chef·fe de projet",
     sousTitre: "Exemple — remplacez ceci par votre propre sous-titre",
-    photo: "", // URL d'une photo (carrée de préférence) — laisser vide pour ne rien afficher
-    adresse: "Votre ville, Pays",
+    photo: "", // URL, chemin relatif, ou data URI (intégrée via editor.html) — laisser vide pour ne rien afficher
+    ville: "Votre ville",
+    pays: "Suisse",
     bio: "Une bio courte (2-3 phrases). Non affichée par les vues actuelles, mais disponible si vous étendez le template."
   },
 
