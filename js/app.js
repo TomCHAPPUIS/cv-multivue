@@ -263,15 +263,43 @@ function renderProfil() {
   const p = CV.profil;
   document.title = p.titre ? `${p.nom} — ${p.titre}` : p.nom;
 
-  document.getElementById('profile-header').innerHTML = `
-    <h1>${p.nom}</h1>
-    <p class="titre-pro">${p.titre || ''}${p.sousTitre ? `<br><em>${p.sousTitre}</em>` : ''}</p>`;
+  const photo = p.photo
+    ? `<img class="profile-photo" src="${p.photo}" alt="${p.nom}">`
+    : '';
 
-  const contactParts = [];
-  if (p.email) contactParts.push(`<a href="mailto:${p.email}">${p.email}</a>`);
-  if (p.telephone) contactParts.push(`<a href="tel:${p.telephone.replace(/\s+/g, '')}">${p.telephone}</a>`);
-  if (p.adresse) contactParts.push(`<span>${p.adresse}</span>`);
-  document.getElementById('contact-info').innerHTML = contactParts.join('');
+  document.getElementById('profile-header').innerHTML = `
+    ${photo}
+    <h1>${p.nom}</h1>
+    <p class="titre-pro">${p.titre || ''}${p.sousTitre ? `<br><em>${p.sousTitre}</em>` : ''}</p>
+    ${p.adresse ? `<p class="lieu">${p.adresse}</p>` : ''}`;
+
+  renderContact();
+}
+
+// ── Contact ───────────────────────────────────────────────────────────────────
+// Jamais de téléphone/email affiché en clair par défaut — voir CV.contact
+// dans data.js pour les deux mécanismes disponibles (mailto / formulaire).
+
+function renderContact() {
+  const c = CV.contact || {};
+  const el = document.getElementById('contact-info');
+
+  if (c.mode === 'form') {
+    if (!c.formAction) {
+      el.innerHTML = `<p class="contact-warning">CV.contact.formAction n'est pas configuré (voir README).</p>`;
+      return;
+    }
+    el.innerHTML = `
+      <form class="contact-form" action="${c.formAction}" method="POST">
+        <input type="text" name="name" placeholder="Votre nom" required>
+        <input type="email" name="_replyto" placeholder="Votre email" required>
+        <textarea name="message" placeholder="Votre message" rows="3" required></textarea>
+        <button type="submit">Envoyer</button>
+      </form>`;
+    return;
+  }
+
+  el.innerHTML = c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '';
 }
 
 // ── Langues ───────────────────────────────────────────────────────────────────

@@ -3,19 +3,36 @@
 // pour personnaliser le site : index.html/app.js/style.css sont génériques
 // et n'ont besoin d'aucune modification.
 //
-// Schéma complet documenté dans README.md (avec diagrammes UML).
+// Schéma complet documenté dans README.md.
 // ─────────────────────────────────────────────────────────────────────────
 
 const CV = {
-  // Vos coordonnées, affichées dans la barre latérale.
+  // Identité publique — ce que vous accepteriez de voir sur un réseau
+  // social. Volontairement AUCUN téléphone/email ici : voir CV.contact
+  // ci-dessous pour ça.
   profil: {
     nom: "Alex Dupont",
     titre: "Chef·fe de projet",
     sousTitre: "Exemple — remplacez ceci par votre propre sous-titre",
+    photo: "", // URL d'une photo (carrée de préférence) — laisser vide pour ne rien afficher
     adresse: "Votre ville, Pays",
-    telephone: "+00 00 000 00 00",
-    email: "vous@exemple.com",
     bio: "Une bio courte (2-3 phrases). Non affichée par les vues actuelles, mais disponible si vous étendez le template."
+  },
+
+  // Contact — jamais de téléphone/email affiché en clair dans le code de
+  // la page par défaut, pour éviter le moissonnage automatique (spam,
+  // scraping) une fois le site en ligne.
+  //   mode "mailto" : lien mailto classique. Le plus simple, mais votre
+  //                   adresse reste lisible dans le code source de la page.
+  //   mode "form"   : un vrai formulaire, envoyé via un service tiers
+  //                   gratuit (ex. Formspree, Web3Forms) — aucune adresse
+  //                   visible dans le code. Créez un compte sur l'un de ces
+  //                   services, récupérez l'URL de formulaire fournie, et
+  //                   collez-la dans formAction.
+  contact: {
+    mode: "mailto",
+    email: "vous@exemple.com",
+    formAction: "" // ex: "https://formspree.io/f/xxxxxxxx" — mode "form" uniquement
   },
 
   // Tables de référence : chaque entrée ci-dessous n'est qu'un EXEMPLE.

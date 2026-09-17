@@ -42,8 +42,20 @@ domaines et compétences concernés.
 `js/data.js` expose un unique objet global `CV`, structuré en trois
 couches :
 
-- **`CV.profil`** — vos coordonnées (nom, titre, contact...), affichées
-  dans la barre latérale.
+- **`CV.profil`** — votre identité publique (nom, titre, photo, ville,
+  bio), affichée dans la barre latérale. Volontairement **aucun
+  téléphone/email ici** — voir `CV.contact` ci-dessous.
+- **`CV.contact`** — comment on vous contacte, sans exposer votre adresse
+  en clair dans le code de la page (évite le moissonnage automatique une
+  fois le site en ligne). Deux modes au choix :
+  - `mode: "mailto"` (par défaut) — lien mailto classique. Simple, mais
+    l'adresse reste lisible dans le code source de la page.
+  - `mode: "form"` — un vrai formulaire, envoyé via un service tiers
+    gratuit (ex. [Formspree](https://formspree.io),
+    [Web3Forms](https://web3forms.com)) : créez un compte, récupérez
+    l'URL de formulaire fournie, collez-la dans `formAction`. Aucune
+    adresse visible dans le code ; en contrepartie, dépend d'un service
+    tiers que vous configurez vous-même (rien à héberger de votre côté).
 - **`CV.taxonomie`** — trois tables de référence qui définissent votre
   propre vocabulaire : `domaines`, `types`, `competences`. Chaque entrée a
   un id court (ex. `technique`), un `label` affiché et, pour
