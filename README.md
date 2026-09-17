@@ -8,6 +8,9 @@ Site 100% statique (HTML/CSS/JS, aucune dépendance, aucun build step) :
 toutes vos données vivent dans un seul fichier, `js/data.js`. Forkez ce
 repo, éditez ce fichier, déployez — c'est tout.
 
+**[→ Voir la démo](https://tomchappuis.github.io/cv-multivue/)** (données
+d'exemple fictives)
+
 ## Les trois vues
 
 1. **Chronologique** — timeline classique, triée par date.
@@ -22,7 +25,9 @@ domaines et compétences concernés.
 
 ## Démarrage rapide
 
-1. Forkez ou clonez ce repo.
+1. Cliquez sur **"Use this template"** en haut de la page GitHub (crée
+   votre propre copie indépendante, sans historique lié à ce repo) — ou
+   forkez/clonez-le directement.
 2. Ouvrez `js/data.js` et remplacez le contenu d'exemple par le vôtre
    (voir "Modèle de données" ci-dessous). Chaque section du fichier est
    commentée.
