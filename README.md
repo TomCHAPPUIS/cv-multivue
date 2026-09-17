@@ -42,6 +42,12 @@ domaines et compétences concernés.
 `js/data.js` expose un unique objet global `CV`, structuré en trois
 couches :
 
+- **`CV.theme`** — apparence du site, pour que votre instance ne ressemble
+  pas à celle de tout le monde. `preset` : `"ambre"` (défaut) / `"ocean"` /
+  `"foret"` / `"mono"`. Pour aller plus loin, `overrides` permet de
+  surcharger des couleurs individuelles par-dessus le preset (ex.
+  `overrides: { accent: "#2563eb" }`) — clés disponibles : `accent`, `bg`,
+  `sidebarBg`, `sidebarText` (codes hexadécimaux).
 - **`CV.profil`** — votre identité publique (nom, titre, photo, ville,
   bio), affichée dans la barre latérale. Volontairement **aucun
   téléphone/email ici** — voir `CV.contact` ci-dessous.

@@ -7,6 +7,15 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 const CV = {
+  // Apparence — pour que votre site ne ressemble pas à celui de tout le
+  // monde. preset au choix : "ambre" (défaut) | "ocean" | "foret" | "mono".
+  // Pour aller plus loin, surchargez une ou plusieurs couleurs par-dessus
+  // le preset (accent, bg, sidebarBg, sidebarText — codes hexadécimaux) :
+  //   overrides: { accent: "#2563eb" }
+  theme: {
+    preset: "ambre"
+  },
+
   // Identité publique — ce que vous accepteriez de voir sur un réseau
   // social. Volontairement AUCUN téléphone/email ici : voir CV.contact
   // ci-dessous pour ça.

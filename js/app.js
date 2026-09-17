@@ -1,7 +1,31 @@
 let currentView = 'timeline';
 let activeFilter = null;
 
+// ── Thème ─────────────────────────────────────────────────────────────────────
+// Presets de couleurs sélectionnables via CV.theme.preset dans data.js, avec
+// possibilité de surcharger des couleurs individuelles via CV.theme.overrides.
+
+const THEME_PRESETS = {
+  ambre: { accent: '#e06b3a', bg: '#f4f2ee', sidebarBg: '#1a1a18', sidebarText: '#e2ddd5' },
+  ocean: { accent: '#2563eb', bg: '#f2f5f8', sidebarBg: '#0f1c2e', sidebarText: '#dbe6f2' },
+  foret: { accent: '#059669', bg: '#f3f6f2', sidebarBg: '#12201a', sidebarText: '#dcece2' },
+  mono:  { accent: '#52525b', bg: '#f5f5f4', sidebarBg: '#1c1c1c', sidebarText: '#e5e5e5' }
+};
+
+function applyTheme() {
+  const t = (CV && CV.theme) || {};
+  const preset = THEME_PRESETS[t.preset] || THEME_PRESETS.ambre;
+  const vars = { ...preset, ...(t.overrides || {}) };
+  const root = document.documentElement.style;
+  if (vars.accent) root.setProperty('--accent', vars.accent);
+  if (vars.bg) root.setProperty('--bg', vars.bg);
+  if (vars.sidebarBg) root.setProperty('--sidebar-bg', vars.sidebarBg);
+  if (vars.sidebarText) root.setProperty('--sidebar-text', vars.sidebarText);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof CV !== 'undefined') applyTheme();
+
   let errors;
   try {
     errors = validateCV();
