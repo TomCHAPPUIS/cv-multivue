@@ -24,32 +24,34 @@ function applyTheme() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof CV !== 'undefined') applyTheme();
-
-  let errors;
+  // Tout le démarrage est protégé par un seul try/catch : une exception
+  // n'importe où ici (thème, validation, rendu) doit toujours aboutir à un
+  // message d'erreur lisible, jamais à une page à moitié rendue et
+  // silencieusement plantée (ex. balises vides sans explication).
   try {
-    errors = validateCV();
-  } catch (e) {
-    renderValidationErrors([`Erreur inattendue en lisant data.js : ${e.message}`]);
-    return;
-  }
-  if (errors.length) {
-    renderValidationErrors(errors);
-    return;
-  }
+    if (typeof CV !== 'undefined') applyTheme();
 
-  renderProfil();
-  renderLangues();
-  renderView('timeline');
+    const errors = validateCV();
+    if (errors.length) {
+      renderValidationErrors(errors);
+      return;
+    }
 
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilter = null;
-      renderView(btn.dataset.view);
+    renderProfil();
+    renderLangues();
+    renderView('timeline');
+
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = null;
+        renderView(btn.dataset.view);
+      });
     });
-  });
+  } catch (e) {
+    renderValidationErrors([`Erreur inattendue au chargement : ${e.message}`]);
+  }
 });
 
 // ── Validation ───────────────────────────────────────────────────────────────
