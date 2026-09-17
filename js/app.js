@@ -1,5 +1,6 @@
 let currentView = 'timeline';
 let activeFilter = null;
+let timelineMode = null; // 'gantt' | 'list' — pour ne re-rendre qu'au changement de mode
 
 // ── Thème ─────────────────────────────────────────────────────────────────────
 // Presets de couleurs sélectionnables via CV.theme.preset dans data.js, avec
@@ -56,6 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (e) {
     renderValidationErrors([`Erreur inattendue au chargement : ${e.message}`]);
   }
+});
+
+// La frise chronologique change de mode (Gantt <-> liste) selon la largeur
+// d'écran — recalculée seulement si on franchit le seuil pendant qu'elle est
+// affichée, pas à chaque pixel de redimensionnement.
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  if (currentView !== 'timeline') return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const mode = window.innerWidth < TIMELINE_MOBILE_BREAKPOINT ? 'list' : 'gantt';
+    if (mode !== timelineMode) renderTimeline(document.getElementById('content'));
+  }, 150);
 });
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -122,9 +136,29 @@ function renderView(view) {
 
 // ── Timeline ─────────────────────────────────────────────────────────────────
 
+// ── Timeline : frise proportionnelle avec chevauchements ────────────────────
+// Position verticale proportionnelle au temps ; les périodes qui se
+// chevauchent sont réparties en "voies" côte à côte (comme un Gantt
+// compact), pour que les cumuls (ex. deux engagements simultanés) se voient
+// d'un coup d'œil plutôt que d'être noyés dans une simple liste.
+
+const TIMELINE_PX_PER_YEAR = 80;
+const TIMELINE_MIN_BAR_H = 56;
+const TIMELINE_MOBILE_BREAKPOINT = 720; // en dessous : repli sur la liste simple
+
 function renderTimeline(container) {
   const items = getAllItems();
-  const html = `<div class="timeline">${items.map(item => `
+  const mode = window.innerWidth < TIMELINE_MOBILE_BREAKPOINT ? 'list' : 'gantt';
+  timelineMode = mode;
+  if (mode === 'list') {
+    renderTimelineList(container, items);
+  } else {
+    renderTimelineGantt(container, items);
+  }
+}
+
+function renderTimelineList(container, items) {
+  container.innerHTML = `<div class="timeline">${items.map(item => `
     <div class="timeline-item">
       <div class="timeline-date">
         <span>${formatPeriode(item)}</span>
@@ -134,7 +168,121 @@ function renderTimeline(container) {
       </div>
     </div>`).join('')}
   </div>`;
-  container.innerHTML = html;
+}
+
+function timelineBounds(items) {
+  const now = new Date().getFullYear();
+  let min = now;
+  let max = now;
+  items.forEach(it => {
+    if (it.debut < min) min = it.debut;
+    const end = (it.actuel || it.fin == null) ? now : it.fin;
+    if (end > max) max = end;
+  });
+  return { min, max };
+}
+
+function timelineItemRange(item, now) {
+  const start = item.debut;
+  const end = (item.actuel || item.fin == null) ? now : item.fin;
+  return [start, end];
+}
+
+// Regroupe les entrées en "clusters" d'éléments qui se chevauchent
+// (composantes connexes dans le temps), puis attribue une voie à chacune
+// par coloration gloutonne — classique algorithme d'ordonnancement
+// d'intervalles. Deux entrées qui ne se chevauchent jamais, même
+// indirectement, ne se disputent jamais les mêmes voies.
+function timelineAssignLanes(items) {
+  const now = new Date().getFullYear();
+  const withRange = items
+    .map(item => {
+      const [s, e] = timelineItemRange(item, now);
+      return { item, s, e };
+    })
+    .sort((a, b) => a.s - b.s || a.e - b.e);
+
+  const clusters = [];
+  let current = [];
+  let currentMaxEnd = -Infinity;
+  withRange.forEach(entry => {
+    if (current.length && entry.s >= currentMaxEnd) {
+      clusters.push(current);
+      current = [];
+      currentMaxEnd = -Infinity;
+    }
+    current.push(entry);
+    currentMaxEnd = Math.max(currentMaxEnd, entry.e);
+  });
+  if (current.length) clusters.push(current);
+
+  const result = [];
+  clusters.forEach(cluster => {
+    const laneEnds = [];
+    const clusterPlaced = cluster.map(entry => {
+      let lane = laneEnds.findIndex(end => entry.s >= end);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(entry.e);
+      } else {
+        laneEnds[lane] = entry.e;
+      }
+      return { ...entry, lane };
+    });
+    const laneCount = laneEnds.length;
+    clusterPlaced.forEach(p => result.push({ ...p, laneCount }));
+  });
+
+  return result;
+}
+
+function renderTimelineGantt(container, items) {
+  if (!items.length) {
+    container.innerHTML = '<p class="hint">Aucune entrée.</p>';
+    return;
+  }
+  const { min, max } = timelineBounds(items);
+  const now = new Date().getFullYear();
+  const yFromTop = (year) => (max - year) * TIMELINE_PX_PER_YEAR;
+  const totalHeight = yFromTop(min) + TIMELINE_MIN_BAR_H / 2 + 24;
+
+  const placed = timelineAssignLanes(items);
+
+  const years = [];
+  for (let y = max; y >= min; y--) years.push(y);
+  const axisHtml = years.map(y => `
+    <div class="tl-axis-row${y === now ? ' tl-axis-row-now' : ''}" style="top:${yFromTop(y)}px">
+      <span class="tl-axis-year">${y === now ? 'auj.' : y}</span>
+      <span class="tl-axis-line"></span>
+    </div>`).join('');
+
+  const barsHtml = placed.map(p => {
+    const item = p.item;
+    const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
+    const rawTop = yFromTop(p.e);
+    const rawHeight = yFromTop(p.s) - yFromTop(p.e);
+    const height = Math.max(rawHeight, TIMELINE_MIN_BAR_H);
+    const top = rawTop - (height - rawHeight) / 2;
+    const left = (p.lane / p.laneCount) * 100;
+    const width = (1 / p.laneCount) * 100;
+    const org = item.organisation || item.etablissement || '';
+    return `
+      <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="top:${top}px; height:${height}px; left:${left}%; width:${width}%; --type-color:${type.couleur}">
+        <div class="tl-bar-card" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
+          <span class="tl-bar-period">${formatPeriode(item)}</span>
+          <strong class="tl-bar-titre">${item.titre}</strong>
+          ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="tl-gantt-wrap">
+      <div class="tl-gantt" style="height:${totalHeight}px">
+        <div class="tl-gantt-axis">${axisHtml}</div>
+        <div class="tl-gantt-bars">${barsHtml}</div>
+      </div>
+    </div>`;
 }
 
 // ── Domain view ───────────────────────────────────────────────────────────────

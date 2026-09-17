@@ -294,6 +294,99 @@ body {
   padding-left: 1.5rem;
 }
 
+/* ── Frise proportionnelle (Gantt compact) ──────────────────────────────── */
+.tl-gantt-wrap {
+  overflow-x: auto;
+}
+.tl-gantt {
+  position: relative;
+  min-width: 480px;
+}
+.tl-gantt-axis {
+  position: absolute;
+  inset: 0;
+}
+.tl-axis-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  transform: translateY(-0.5px);
+}
+.tl-axis-year {
+  width: 44px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.tl-axis-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.tl-axis-row-now .tl-axis-year {
+  color: var(--accent);
+  font-weight: 700;
+}
+.tl-axis-row-now .tl-axis-line {
+  background: var(--accent);
+  opacity: 0.5;
+}
+.tl-gantt-bars {
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 0;
+  bottom: 0;
+}
+.tl-bar {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 3px;
+}
+.tl-bar-card {
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--type-color, var(--accent));
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  box-shadow: var(--shadow);
+}
+.tl-bar-actuel .tl-bar-card {
+  border-left-style: dashed;
+}
+.tl-bar-period {
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.tl-bar-titre {
+  font-size: 0.8rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.tl-bar-org {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Cards (full) ────────────────────────────────────────────────────────── */
 .card {
   background: var(--card-bg);
