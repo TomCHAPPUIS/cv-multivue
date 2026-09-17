@@ -381,6 +381,13 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tl-bar-org {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tl-bar-period {
   font-size: 0.65rem;
   color: var(--text-muted);

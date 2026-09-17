@@ -292,6 +292,7 @@ function renderTimelineGantt(container, items) {
       <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_LANE_H}px; --type-color:${type.couleur}; --type-bg:${bg}">
         <div class="tl-bar-card" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
           <strong class="tl-bar-titre">${item.titre}</strong>
+          ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
           <span class="tl-bar-period">${formatPeriode(item)}</span>
         </div>
       </div>`;
