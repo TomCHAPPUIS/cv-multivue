@@ -109,12 +109,14 @@ function formatPeriode(item) {
 
 function renderView(view) {
   currentView = view;
+  const main    = document.getElementById('main');
   const header  = document.getElementById('view-header');
   const content = document.getElementById('content');
   const filters = document.getElementById('sidebar-filters');
 
   content.innerHTML = '';
   filters.innerHTML = '';
+  main.classList.toggle('main-wide', view === 'timeline');
 
   const titles = {
     timeline:   'Parcours chronologique',
@@ -142,11 +144,11 @@ function renderView(view) {
 // compact), pour que les cumuls (ex. deux engagements simultanés) se voient
 // d'un coup d'œil plutôt que d'être noyés dans une simple liste.
 
-const TIMELINE_PX_PER_YEAR = 90;
+const TIMELINE_PX_PER_YEAR_MIN = 90; // plancher, jamais plus serré que ça
 const TIMELINE_MIN_BAR_W = 70;
-const TIMELINE_LANE_H = 60;
-const TIMELINE_LANE_GAP = 8;
-const TIMELINE_AXIS_H = 26;
+const TIMELINE_LANE_H = 72;
+const TIMELINE_LANE_GAP = 10;
+const TIMELINE_AXIS_H = 28;
 const TIMELINE_MOBILE_BREAKPOINT = 720; // en dessous : repli sur la liste simple
 
 // Mélange une couleur hexadécimale avec du blanc, pour un fond doux qui
@@ -256,8 +258,14 @@ function renderTimelineGantt(container, items) {
   }
   const { min, max } = timelineBounds(items);
   const now = new Date().getFullYear();
-  const xFromLeft = (year) => (year - min) * TIMELINE_PX_PER_YEAR;
-  const totalWidth = xFromLeft(max) + TIMELINE_MIN_BAR_W / 2 + 40;
+  const yearSpan = Math.max(max - min, 1);
+  // Étire la frise pour remplir la largeur disponible plutôt que de laisser
+  // du vide — ne descend jamais sous le plancher (lisibilité), mais grandit
+  // librement sur un grand écran.
+  const available = container.clientWidth || 0;
+  const pxPerYear = Math.max(TIMELINE_PX_PER_YEAR_MIN, (available - TIMELINE_MIN_BAR_W) / yearSpan);
+  const xFromLeft = (year) => (year - min) * pxPerYear;
+  const totalWidth = Math.max(xFromLeft(max) + TIMELINE_MIN_BAR_W / 2 + 40, available);
 
   const placed = timelineAssignLanes(items);
   const maxLanes = placed.reduce((m, p) => Math.max(m, p.laneCount), 1);

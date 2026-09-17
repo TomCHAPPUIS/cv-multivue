@@ -243,6 +243,12 @@ body {
   padding: 2.5rem 3rem;
   max-width: 860px;
 }
+/* La frise chronologique profite d'un conteneur bien plus large que les
+   vues à base de texte (cartes/listes) — sinon elle reste cantonnée à une
+   petite portion de l'écran malgré tout l'espace disponible à côté. */
+#main.main-wide {
+  max-width: 1600px;
+}
 #view-header { margin-bottom: 2rem; }
 #view-header h2 {
   font-size: 1.4rem;
