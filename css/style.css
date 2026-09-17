@@ -294,51 +294,52 @@ body {
   padding-left: 1.5rem;
 }
 
-/* ── Frise proportionnelle (Gantt compact) ──────────────────────────────── */
+/* ── Frise proportionnelle (Gantt compact, horizontale) ─────────────────── */
 .tl-gantt-wrap {
   overflow-x: auto;
+  padding-bottom: 0.5rem;
 }
 .tl-gantt {
   position: relative;
-  min-width: 480px;
+  min-width: 100%;
 }
 .tl-gantt-axis {
   position: absolute;
   inset: 0;
 }
-.tl-axis-row {
+.tl-axis-col {
   position: absolute;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  transform: translateY(-0.5px);
+  top: 0;
+  bottom: 0;
 }
 .tl-axis-year {
-  width: 44px;
-  flex-shrink: 0;
-  text-align: right;
-  font-size: 0.7rem;
+  position: absolute;
+  top: 0;
+  left: 6px;
+  font-size: 0.68rem;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 .tl-axis-line {
-  flex: 1;
-  height: 1px;
+  position: absolute;
+  top: 22px;
+  bottom: 0;
+  left: 0;
+  width: 1px;
   background: var(--border);
 }
-.tl-axis-row-now .tl-axis-year {
+.tl-axis-col-now .tl-axis-year {
   color: var(--accent);
   font-weight: 700;
 }
-.tl-axis-row-now .tl-axis-line {
+.tl-axis-col-now .tl-axis-line {
   background: var(--accent);
-  opacity: 0.5;
+  opacity: 0.6;
+  width: 2px;
 }
 .tl-gantt-bars {
   position: absolute;
-  top: 0;
-  left: 56px;
+  left: 0;
   right: 0;
   bottom: 0;
 }
@@ -351,39 +352,32 @@ body {
   height: 100%;
   width: 100%;
   box-sizing: border-box;
-  background: var(--card-bg);
+  background: var(--type-bg, var(--card-bg));
   border: 1px solid var(--border);
   border-left: 3px solid var(--type-color, var(--accent));
   border-radius: 6px;
-  padding: 0.4rem 0.55rem;
+  padding: 0.35rem 0.55rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  justify-content: center;
+  gap: 0.15rem;
   box-shadow: var(--shadow);
 }
 .tl-bar-actuel .tl-bar-card {
   border-left-style: dashed;
 }
-.tl-bar-period {
-  font-size: 0.63rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
 .tl-bar-titre {
   font-size: 0.8rem;
-  line-height: 1.25;
+  font-weight: 600;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
 }
-.tl-bar-org {
-  font-size: 0.7rem;
+.tl-bar-period {
+  font-size: 0.65rem;
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

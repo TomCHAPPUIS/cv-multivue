@@ -142,9 +142,22 @@ function renderView(view) {
 // compact), pour que les cumuls (ex. deux engagements simultanés) se voient
 // d'un coup d'œil plutôt que d'être noyés dans une simple liste.
 
-const TIMELINE_PX_PER_YEAR = 80;
-const TIMELINE_MIN_BAR_H = 56;
+const TIMELINE_PX_PER_YEAR = 90;
+const TIMELINE_MIN_BAR_W = 70;
+const TIMELINE_LANE_H = 60;
+const TIMELINE_LANE_GAP = 8;
+const TIMELINE_AXIS_H = 26;
 const TIMELINE_MOBILE_BREAKPOINT = 720; // en dessous : repli sur la liste simple
+
+// Mélange une couleur hexadécimale avec du blanc, pour un fond doux qui
+// reste lisible avec du texte sombre par-dessus (la couleur pleine ne sert
+// que pour la bordure/l'accent).
+function tintColor(hex, whiteRatio) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const mix = (c) => Math.round(c * (1 - whiteRatio) + 255 * whiteRatio);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
 
 function renderTimeline(container) {
   const items = getAllItems();
@@ -243,15 +256,18 @@ function renderTimelineGantt(container, items) {
   }
   const { min, max } = timelineBounds(items);
   const now = new Date().getFullYear();
-  const yFromTop = (year) => (max - year) * TIMELINE_PX_PER_YEAR;
-  const totalHeight = yFromTop(min) + TIMELINE_MIN_BAR_H / 2 + 24;
+  const xFromLeft = (year) => (year - min) * TIMELINE_PX_PER_YEAR;
+  const totalWidth = xFromLeft(max) + TIMELINE_MIN_BAR_W / 2 + 40;
 
   const placed = timelineAssignLanes(items);
+  const maxLanes = placed.reduce((m, p) => Math.max(m, p.laneCount), 1);
+  const barsHeight = maxLanes * (TIMELINE_LANE_H + TIMELINE_LANE_GAP) + TIMELINE_LANE_GAP;
+  const totalHeight = TIMELINE_AXIS_H + barsHeight;
 
   const years = [];
-  for (let y = max; y >= min; y--) years.push(y);
+  for (let y = min; y <= max; y++) years.push(y);
   const axisHtml = years.map(y => `
-    <div class="tl-axis-row${y === now ? ' tl-axis-row-now' : ''}" style="top:${yFromTop(y)}px">
+    <div class="tl-axis-col${y === now ? ' tl-axis-col-now' : ''}" style="left:${xFromLeft(y)}px">
       <span class="tl-axis-year">${y === now ? 'auj.' : y}</span>
       <span class="tl-axis-line"></span>
     </div>`).join('');
@@ -259,28 +275,27 @@ function renderTimelineGantt(container, items) {
   const barsHtml = placed.map(p => {
     const item = p.item;
     const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
-    const rawTop = yFromTop(p.e);
-    const rawHeight = yFromTop(p.s) - yFromTop(p.e);
-    const height = Math.max(rawHeight, TIMELINE_MIN_BAR_H);
-    const top = rawTop - (height - rawHeight) / 2;
-    const left = (p.lane / p.laneCount) * 100;
-    const width = (1 / p.laneCount) * 100;
+    const rawLeft = xFromLeft(p.s);
+    const rawWidth = xFromLeft(p.e) - xFromLeft(p.s);
+    const width = Math.max(rawWidth, TIMELINE_MIN_BAR_W);
+    const left = rawLeft - (width - rawWidth) / 2;
+    const top = TIMELINE_LANE_GAP + p.lane * (TIMELINE_LANE_H + TIMELINE_LANE_GAP);
     const org = item.organisation || item.etablissement || '';
+    const bg = tintColor(type.couleur, 0.85);
     return `
-      <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="top:${top}px; height:${height}px; left:${left}%; width:${width}%; --type-color:${type.couleur}">
+      <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_LANE_H}px; --type-color:${type.couleur}; --type-bg:${bg}">
         <div class="tl-bar-card" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
-          <span class="tl-bar-period">${formatPeriode(item)}</span>
           <strong class="tl-bar-titre">${item.titre}</strong>
-          ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
+          <span class="tl-bar-period">${formatPeriode(item)}</span>
         </div>
       </div>`;
   }).join('');
 
   container.innerHTML = `
     <div class="tl-gantt-wrap">
-      <div class="tl-gantt" style="height:${totalHeight}px">
+      <div class="tl-gantt" style="width:${totalWidth}px; height:${totalHeight}px">
         <div class="tl-gantt-axis">${axisHtml}</div>
-        <div class="tl-gantt-bars">${barsHtml}</div>
+        <div class="tl-gantt-bars" style="top:${TIMELINE_AXIS_H}px">${barsHtml}</div>
       </div>
     </div>`;
 }
