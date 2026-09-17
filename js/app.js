@@ -1,6 +1,5 @@
 let currentView = 'timeline';
 let activeFilter = null;
-let timelineMode = null; // 'gantt' | 'list' — pour ne re-rendre qu'au changement de mode
 
 // ── Thème ─────────────────────────────────────────────────────────────────────
 // Presets de couleurs sélectionnables via CV.theme.preset dans data.js, avec
@@ -59,17 +58,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// La frise chronologique change de mode (Gantt <-> liste) selon la largeur
-// d'écran — recalculée seulement si on franchit le seuil pendant qu'elle est
-// affichée, pas à chaque pixel de redimensionnement.
+// La frise chronologique s'adapte en continu à la largeur de la fenêtre :
+// changement de mode Gantt <-> liste au franchissement du seuil mobile, et
+// ré-échelonnage de pxPerYear à chaque redimensionnement sinon (anti-rebond
+// pour ne pas re-rendre à chaque pixel pendant un glisser-redimensionner).
 let resizeTimer = null;
 window.addEventListener('resize', () => {
   if (currentView !== 'timeline') return;
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    const mode = window.innerWidth < TIMELINE_MOBILE_BREAKPOINT ? 'list' : 'gantt';
-    if (mode !== timelineMode) renderTimeline(document.getElementById('content'));
-  }, 150);
+    renderTimeline(document.getElementById('content'));
+  }, 120);
 });
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -164,7 +163,6 @@ function tintColor(hex, whiteRatio) {
 function renderTimeline(container) {
   const items = getAllItems();
   const mode = window.innerWidth < TIMELINE_MOBILE_BREAKPOINT ? 'list' : 'gantt';
-  timelineMode = mode;
   if (mode === 'list') {
     renderTimelineList(container, items);
   } else {
