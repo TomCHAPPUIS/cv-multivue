@@ -623,12 +623,12 @@ function downloadDataJs() {
 }
 
 function openPreview() {
-  try {
-    sessionStorage.setItem('cvPreviewData', JSON.stringify(toOutputCV()));
-    window.open('preview.html', '_blank');
-  } catch (e) {
-    alert("Impossible de lancer l'aperçu : " + e.message);
-  }
+  // Le brouillon est déjà sauvegardé en continu dans localStorage
+  // (saveDraft(), appelé par updateOutput() à chaque changement) —
+  // preview.html le relit directement, pas besoin de transmission
+  // séparée entre onglets.
+  saveDraft();
+  window.open('preview.html', '_blank');
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────

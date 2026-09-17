@@ -38,12 +38,14 @@
   </main>
 
   <script>
-    // Aperçu utilisé par editor.html : lit les données depuis
-    // sessionStorage (déposées par l'éditeur) au lieu de js/data.js.
-    // Si absentes/invalides, window.CV reste undefined — js/validate.js
-    // + js/app.js affichent alors l'écran d'erreur standard.
+    // Aperçu utilisé par editor.html : lit le brouillon depuis localStorage
+    // (sauvegardé en continu par l'éditeur, clé "cvEditorDraft") au lieu de
+    // js/data.js — indépendant de la relation onglet-ouvreur (contrairement
+    // à sessionStorage + window.open, peu fiable selon navigateur/bloqueur
+    // de popup). Si absent/invalide, window.CV reste undefined —
+    // js/validate.js + js/app.js affichent alors l'écran d'erreur standard.
     try {
-      const raw = sessionStorage.getItem('cvPreviewData');
+      const raw = localStorage.getItem('cvEditorDraft');
       if (raw) window.CV = JSON.parse(raw);
     } catch (e) { /* CV reste undefined, géré par l'écran de validation */ }
   </script>
