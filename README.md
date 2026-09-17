@@ -54,6 +54,12 @@ domaines et compétences concernés.
    sont des outils de saisie, pas obligatoires pour le site publié — vous
    pouvez les exclure du déploiement si vous préférez.)
 
+   Si vous auto-hébergez via nginx et que vous itérez souvent sur vos
+   données, pensez à désactiver le cache agressif (`Cache-Control:
+   no-cache, must-revalidate` sur la `location /`) — sinon un
+   redéploiement peut sembler "ne rien changer" tant que le navigateur
+   n'est pas rafraîchi en forçant (Ctrl+Shift+R).
+
 ## Modèle de données
 
 `js/data.js` expose un unique objet global `CV`, structuré en trois
