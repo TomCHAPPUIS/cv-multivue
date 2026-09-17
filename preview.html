@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CV</title>
+  <title>Aperçu — CV</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
   <aside id="sidebar">
     <div class="profile-header" id="profile-header"></div>
-
     <div class="contact-info" id="contact-info"></div>
 
     <nav class="view-nav">
@@ -38,7 +37,16 @@
     <div id="content"></div>
   </main>
 
-  <script src="js/data.js"></script>
+  <script>
+    // Aperçu utilisé par editor.html : lit les données depuis
+    // sessionStorage (déposées par l'éditeur) au lieu de js/data.js.
+    // Si absentes/invalides, window.CV reste undefined — js/validate.js
+    // + js/app.js affichent alors l'écran d'erreur standard.
+    try {
+      const raw = sessionStorage.getItem('cvPreviewData');
+      if (raw) window.CV = JSON.parse(raw);
+    } catch (e) { /* CV reste undefined, géré par l'écran de validation */ }
+  </script>
   <script src="js/validate.js"></script>
   <script src="js/app.js"></script>
 </body>

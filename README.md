@@ -28,14 +28,25 @@ domaines et compétences concernés.
 1. Cliquez sur **"Use this template"** en haut de la page GitHub (crée
    votre propre copie indépendante, sans historique lié à ce repo) — ou
    forkez/clonez-le directement.
-2. Ouvrez `js/data.js` et remplacez le contenu d'exemple par le vôtre
-   (voir "Modèle de données" ci-dessous). Chaque section du fichier est
-   commentée.
+2. Renseignez vos données de l'une des deux façons suivantes :
+   - **Éditeur visuel** (recommandé si vous n'êtes pas à l'aise avec le
+     code) : ouvrez `editor.html` dans un navigateur, remplissez le
+     formulaire, cliquez sur **Prévisualiser** pour voir le rendu en
+     direct, puis **Télécharger data.js** et remplacez `js/data.js` par le
+     fichier téléchargé. Rien n'est envoyé nulle part : tout reste dans
+     votre navigateur tant que vous ne téléchargez pas.
+   - **Édition directe** : ouvrez `js/data.js` et remplacez le contenu
+     d'exemple par le vôtre (voir "Modèle de données" ci-dessous — chaque
+     section du fichier est commentée). Une erreur de syntaxe ou une
+     référence de taxonomie inexistante affiche un message d'erreur
+     explicite au chargement plutôt qu'une page blanche.
 3. Ouvrez `index.html` dans un navigateur pour prévisualiser — aucun
    serveur ni build nécessaire.
 4. Déployez `index.html` + `css/` + `js/` sur n'importe quel hébergeur
    statique : GitHub Pages, Netlify, Vercel, ou un simple `nginx`/`python
-   -m http.server` sur votre propre machine.
+   -m http.server` sur votre propre machine. (`editor.html`/`preview.html`
+   sont des outils de saisie, pas obligatoires pour le site publié — vous
+   pouvez les exclure du déploiement si vous préférez.)
 
 ## Modèle de données
 
@@ -87,11 +98,17 @@ vues s'adaptent automatiquement, sans toucher au code.
 ## Structure du projet
 
 ```
-index.html       ← squelette de page (générique, ne pas modifier)
-css/style.css     ← mise en forme (générique, ne pas modifier)
+index.html        ← le site publié (générique, ne pas modifier)
+editor.html        ← formulaire de saisie (outil, pas nécessaire en prod)
+preview.html        ← aperçu utilisé par editor.html (idem)
+css/
+  style.css          ← mise en forme du site (générique)
+  editor.css          ← mise en forme de l'éditeur (générique)
 js/
-  data.js         ← VOS données (le seul fichier à éditer)
-  app.js          ← logique de rendu des 3 vues (générique, ne pas modifier)
+  data.js               ← VOS données (le seul fichier à éditer à la main)
+  validate.js            ← vérifie data.js, partagé site + éditeur (générique)
+  app.js                  ← logique de rendu des 3 vues (générique)
+  editor.js                ← logique du formulaire de saisie (générique)
 ```
 
 ## Licence

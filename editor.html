@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Éditeur — CV</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/editor.css">
+</head>
+<body class="editor-body">
+
+  <header class="editor-header">
+    <div>
+      <h1>Éditeur de données</h1>
+      <p class="hint">Modifie tes données puis télécharge <code>data.js</code> — rien n'est envoyé nulle part, tout reste dans ce navigateur tant que tu ne télécharges pas.</p>
+    </div>
+    <div class="editor-actions">
+      <button type="button" id="btn-preview" class="btn-secondary">Prévisualiser</button>
+      <button type="button" id="btn-download" class="btn-primary">Télécharger data.js</button>
+    </div>
+  </header>
+
+  <div id="validation-banner" class="validation-banner"></div>
+
+  <main class="editor-grid">
+    <div class="editor-form">
+      <section id="section-theme" class="editor-section"></section>
+      <section id="section-profil" class="editor-section"></section>
+      <section id="section-contact" class="editor-section"></section>
+      <section id="section-taxonomie" class="editor-section"></section>
+      <section id="section-experiences" class="editor-section"></section>
+      <section id="section-formations" class="editor-section"></section>
+      <section id="section-projets" class="editor-section"></section>
+      <section id="section-langues" class="editor-section"></section>
+    </div>
+
+    <div class="editor-output">
+      <h2>data.js généré</h2>
+      <p class="hint">Remplacez le contenu de <code>js/data.js</code> par ceci (ou téléchargez avec le bouton ci-dessus).</p>
+      <textarea id="output" readonly spellcheck="false"></textarea>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/validate.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>

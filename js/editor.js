@@ -1,0 +1,522 @@
+// ─────────────────────────────────────────────────────────────────────────
+// editor.js — formulaire de saisie pour éviter d'éditer js/data.js à la
+// main. Ne modifie AUCUN fichier disque (site 100% statique, pas de
+// backend) : produit un data.js à télécharger et remplacer soi-même.
+// ─────────────────────────────────────────────────────────────────────────
+
+let state = null;
+
+// ── Utilitaires ──────────────────────────────────────────────────────────────
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function slugify(str) {
+  const base = String(str || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'entree';
+}
+
+function uniqueId(base, usedIds) {
+  let id = base, n = 2;
+  while (usedIds.has(id)) id = `${base}-${n++}`;
+  usedIds.add(id);
+  return id;
+}
+
+function objToArr(obj) {
+  return Object.entries(obj || {}).map(([id, v]) => ({ id, ...v }));
+}
+function arrToObj(arr) {
+  const obj = {};
+  (arr || []).forEach(({ id, ...rest }) => { obj[id] = rest; });
+  return obj;
+}
+
+// ── État ─────────────────────────────────────────────────────────────────────
+
+function defaultState() {
+  return {
+    theme: { preset: 'ambre', overrides: {} },
+    profil: { nom: '', titre: '', sousTitre: '', photo: '', adresse: '', bio: '' },
+    contact: { mode: 'mailto', email: '', formAction: '' },
+    taxonomie: { domaines: [], types: [], competences: [] },
+    experiences: [], formations: [], projets: [], langues: []
+  };
+}
+
+function loadInitialState() {
+  const src = (typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState();
+  return {
+    theme: src.theme || { preset: 'ambre', overrides: {} },
+    profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', adresse: '', bio: '' },
+    contact: src.contact || { mode: 'mailto', email: '', formAction: '' },
+    taxonomie: {
+      domaines: objToArr(src.taxonomie && src.taxonomie.domaines),
+      types: objToArr(src.taxonomie && src.taxonomie.types),
+      competences: objToArr(src.taxonomie && src.taxonomie.competences)
+    },
+    experiences: src.experiences || [],
+    formations: src.formations || [],
+    projets: src.projets || [],
+    langues: src.langues || []
+  };
+}
+
+function toOutputCV() {
+  return {
+    theme: state.theme,
+    profil: state.profil,
+    contact: state.contact,
+    taxonomie: {
+      domaines: arrToObj(state.taxonomie.domaines),
+      types: arrToObj(state.taxonomie.types),
+      competences: arrToObj(state.taxonomie.competences)
+    },
+    experiences: state.experiences,
+    formations: state.formations,
+    projets: state.projets,
+    langues: state.langues
+  };
+}
+
+function generateDataJs() {
+  return `// Généré par editor.html — voir README.md pour le schéma complet.\nconst CV = ${JSON.stringify(toOutputCV(), null, 2)};\n`;
+}
+
+function allTaxoIds() {
+  const s = new Set();
+  ['domaines', 'types', 'competences'].forEach(k => state.taxonomie[k].forEach(t => s.add(t.id)));
+  return s;
+}
+
+function allEntryIds() {
+  const s = new Set();
+  ['experiences', 'formations', 'projets'].forEach(k => state[k].forEach(e => e.id && s.add(e.id)));
+  return s;
+}
+
+// ── Sortie live (validation + code généré) ─────────────────────────────────
+
+function updateOutput() {
+  document.getElementById('output').value = generateDataJs();
+
+  const errors = validateCV(toOutputCV());
+  const banner = document.getElementById('validation-banner');
+  if (!errors.length) {
+    banner.innerHTML = '<p class="ok">✓ Données valides — prêtes à télécharger.</p>';
+  } else {
+    banner.innerHTML =
+      `<p class="warn">${errors.length} point${errors.length > 1 ? 's' : ''} à corriger :</p>` +
+      `<ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+  }
+}
+
+// ── Thème ────────────────────────────────────────────────────────────────────
+
+function buildThemeSection() {
+  const c = document.getElementById('section-theme');
+  const presets = ['ambre', 'ocean', 'foret', 'mono'];
+  c.innerHTML = `
+    <h2>Apparence</h2>
+    <label class="field">
+      <span>Palette</span>
+      <select id="theme-preset">
+        ${presets.map(p => `<option value="${p}" ${state.theme.preset === p ? 'selected' : ''}>${p}</option>`).join('')}
+      </select>
+    </label>
+    <p class="hint">Pour une couleur d'accent personnalisée par-dessus la palette, éditez <code>overrides</code> directement dans le fichier généré — voir README.</p>`;
+
+  document.getElementById('theme-preset').addEventListener('change', (e) => {
+    state.theme.preset = e.target.value;
+    updateOutput();
+  });
+}
+
+// ── Profil ───────────────────────────────────────────────────────────────────
+
+function textField(id, label, value, placeholder = '') {
+  return `<label class="field"><span>${label}</span><input type="text" id="${id}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}"></label>`;
+}
+
+function textareaField(id, label, value, placeholder = '') {
+  return `<label class="field"><span>${label}</span><textarea id="${id}" rows="3" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value)}</textarea></label>`;
+}
+
+function buildProfilSection() {
+  const c = document.getElementById('section-profil');
+  const p = state.profil;
+  c.innerHTML = `
+    <h2>Identité publique</h2>
+    <p class="hint">Ce que vous accepteriez de voir sur un réseau social. Aucun téléphone/email ici — voir la section Contact.</p>
+    ${textField('p-nom', 'Nom', p.nom)}
+    ${textField('p-titre', 'Titre', p.titre)}
+    ${textField('p-soustitre', 'Sous-titre', p.sousTitre)}
+    ${textField('p-photo', 'Photo (URL ou chemin relatif)', p.photo, 'images/moi.jpg')}
+    ${textField('p-adresse', 'Ville', p.adresse)}
+    ${textareaField('p-bio', 'Bio courte', p.bio)}`;
+
+  const bind = (id, key) => document.getElementById(id).addEventListener('input', (e) => {
+    state.profil[key] = e.target.value;
+    updateOutput();
+  });
+  bind('p-nom', 'nom');
+  bind('p-titre', 'titre');
+  bind('p-soustitre', 'sousTitre');
+  bind('p-photo', 'photo');
+  bind('p-adresse', 'adresse');
+  bind('p-bio', 'bio');
+}
+
+// ── Contact ──────────────────────────────────────────────────────────────────
+
+function buildContactSection() {
+  const c = document.getElementById('section-contact');
+  const ct = state.contact;
+  c.innerHTML = `
+    <h2>Contact</h2>
+    <p class="hint">Jamais affiché en clair dans le code de la page en mode formulaire — voir README pour le détail du compromis.</p>
+    <label class="field">
+      <span>Mode</span>
+      <select id="c-mode">
+        <option value="mailto" ${ct.mode === 'mailto' ? 'selected' : ''}>mailto (simple, adresse visible dans le code)</option>
+        <option value="form" ${ct.mode === 'form' ? 'selected' : ''}>formulaire (service tiers, adresse cachée)</option>
+      </select>
+    </label>
+    <div id="c-fields"></div>`;
+
+  const renderFields = () => {
+    const fc = document.getElementById('c-fields');
+    if (state.contact.mode === 'form') {
+      fc.innerHTML = textField('c-formaction', 'URL du formulaire (Formspree, Web3Forms...)', ct.formAction, 'https://formspree.io/f/xxxxxxxx');
+      document.getElementById('c-formaction').addEventListener('input', (e) => {
+        state.contact.formAction = e.target.value;
+        updateOutput();
+      });
+    } else {
+      fc.innerHTML = textField('c-email', 'Email', ct.email);
+      document.getElementById('c-email').addEventListener('input', (e) => {
+        state.contact.email = e.target.value;
+        updateOutput();
+      });
+    }
+  };
+  renderFields();
+
+  document.getElementById('c-mode').addEventListener('change', (e) => {
+    state.contact.mode = e.target.value;
+    renderFields();
+    updateOutput();
+  });
+}
+
+// ── Taxonomie ────────────────────────────────────────────────────────────────
+
+const TAXO_LABELS = { domaines: 'Domaines', types: 'Types', competences: 'Compétences' };
+
+function buildTaxonomieSection() {
+  const c = document.getElementById('section-taxonomie');
+  c.innerHTML = `
+    <h2>Taxonomie</h2>
+    <p class="hint">Vos propres catégories. L'identifiant (petit texte gris) est généré automatiquement à la création et sert de référence stable dans vos entrées — pour le changer, supprimez l'entrée et recréez-la.</p>
+    ${Object.keys(TAXO_LABELS).map(kind => `
+      <div class="taxo-block">
+        <h3>${TAXO_LABELS[kind]}</h3>
+        <div id="taxo-list-${kind}"></div>
+        <button type="button" class="btn-add" id="taxo-add-${kind}">+ Ajouter</button>
+      </div>`).join('')}`;
+
+  Object.keys(TAXO_LABELS).forEach(kind => {
+    renderTaxoList(kind);
+    document.getElementById(`taxo-add-${kind}`).addEventListener('click', () => {
+      const id = uniqueId(slugify('nouveau'), allTaxoIds());
+      const entry = kind === 'competences'
+        ? { id, label: 'Nouvelle compétence', groupe: 'Management' }
+        : { id, label: 'Nouveau', couleur: '#888888' };
+      state.taxonomie[kind].push(entry);
+      renderTaxoList(kind);
+      refreshEntrySections();
+      updateOutput();
+    });
+  });
+}
+
+function renderTaxoList(kind) {
+  const list = state.taxonomie[kind];
+  const el = document.getElementById(`taxo-list-${kind}`);
+  el.innerHTML = list.map((t, i) => `
+    <div class="taxo-row">
+      <span class="taxo-id">${escapeHtml(t.id)}</span>
+      <input type="text" data-i="${i}" data-f="label" value="${escapeHtml(t.label)}" placeholder="Libellé">
+      ${kind === 'competences'
+        ? `<input type="text" data-i="${i}" data-f="groupe" value="${escapeHtml(t.groupe)}" placeholder="Groupe">`
+        : `<input type="color" data-i="${i}" data-f="couleur" value="${escapeHtml(t.couleur || '#888888')}">`}
+      <button type="button" class="btn-remove" data-i="${i}">✕</button>
+    </div>`).join('') || '<p class="hint">Aucune entrée.</p>';
+
+  el.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const i = Number(e.target.dataset.i);
+      const f = e.target.dataset.f;
+      state.taxonomie[kind][i][f] = e.target.value;
+      updateOutput();
+    });
+  });
+  el.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = Number(e.target.dataset.i);
+      state.taxonomie[kind].splice(i, 1);
+      renderTaxoList(kind);
+      refreshEntrySections();
+      updateOutput();
+    });
+  });
+}
+
+function refreshEntrySections() {
+  buildEntriesSection('experiences');
+  buildEntriesSection('formations');
+  buildEntriesSection('projets');
+}
+
+// ── Expériences / Formations / Projets ──────────────────────────────────────
+
+const ENTRY_LABELS = { experiences: 'Expériences', formations: 'Formations', projets: 'Projets' };
+const ENTRY_TYPE_DEFAULT = { experiences: 'emploi', formations: 'formation', projets: 'projet' };
+
+function newEntry(collection) {
+  return {
+    id: '', titre: '', organisation: '', lieu: '',
+    debut: new Date().getFullYear(), fin: null, actuel: true,
+    type: ENTRY_TYPE_DEFAULT[collection] || '',
+    domaines: [], competences: [], description: '', points_cles: [],
+    ...(collection === 'formations' ? { etablissement: '' } : {}),
+    ...(collection === 'projets' ? { technologies: [], placeholder: true } : {})
+  };
+}
+
+function buildEntriesSection(collection) {
+  const c = document.getElementById(`section-${collection}`);
+  c.innerHTML = `
+    <h2>${ENTRY_LABELS[collection]}</h2>
+    <div id="entries-list-${collection}"></div>
+    <button type="button" class="btn-add" id="entries-add-${collection}">+ Ajouter</button>`;
+
+  renderEntryCards(collection);
+  document.getElementById(`entries-add-${collection}`).addEventListener('click', () => {
+    state[collection].push(newEntry(collection));
+    renderEntryCards(collection);
+    updateOutput();
+  });
+}
+
+function renderEntryCards(collection) {
+  const list = state[collection];
+  const el = document.getElementById(`entries-list-${collection}`);
+  const domaines = state.taxonomie.domaines;
+  const types = state.taxonomie.types;
+  const competences = state.taxonomie.competences;
+
+  el.innerHTML = list.map((item, i) => `
+    <div class="entry-card">
+      <div class="entry-card-head">
+        <strong>${escapeHtml(item.titre) || `${ENTRY_LABELS[collection].slice(0, -1)} #${i + 1}`}</strong>
+        <span class="taxo-id">${escapeHtml(item.id)}</span>
+        <button type="button" class="btn-remove" data-i="${i}">✕ Supprimer</button>
+      </div>
+      ${textField(`e-${collection}-${i}-titre`, 'Titre', item.titre)}
+      ${textField(`e-${collection}-${i}-org`, collection === 'formations' ? 'Département / faculté' : 'Organisation', item.organisation)}
+      ${collection === 'formations' ? textField(`e-${collection}-${i}-etab`, 'Établissement', item.etablissement || '') : ''}
+      ${textField(`e-${collection}-${i}-lieu`, 'Lieu', item.lieu || '')}
+      <div class="field-row">
+        <label class="field"><span>Début</span><input type="number" id="e-${collection}-${i}-debut" value="${item.debut ?? ''}"></label>
+        <label class="field"><span>Fin</span><input type="number" id="e-${collection}-${i}-fin" value="${item.fin ?? ''}" ${item.actuel ? 'disabled' : ''}></label>
+        <label class="field field-checkbox"><input type="checkbox" id="e-${collection}-${i}-actuel" ${item.actuel ? 'checked' : ''}><span>En cours</span></label>
+      </div>
+      <label class="field">
+        <span>Type</span>
+        <select id="e-${collection}-${i}-type">
+          <option value="">—</option>
+          ${types.map(t => `<option value="${escapeHtml(t.id)}" ${item.type === t.id ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
+        </select>
+      </label>
+      <fieldset class="chip-group">
+        <legend>Domaines</legend>
+        ${domaines.map(d => `
+          <label class="chip"><input type="checkbox" data-key="${escapeHtml(d.id)}" ${item.domaines.includes(d.id) ? 'checked' : ''} class="e-${collection}-${i}-dom">${escapeHtml(d.label)}</label>`).join('') || '<span class="hint">Aucun domaine défini.</span>'}
+      </fieldset>
+      <fieldset class="chip-group">
+        <legend>Compétences</legend>
+        ${competences.map(cp => `
+          <label class="chip"><input type="checkbox" data-key="${escapeHtml(cp.id)}" ${item.competences.includes(cp.id) ? 'checked' : ''} class="e-${collection}-${i}-comp">${escapeHtml(cp.label)}</label>`).join('') || '<span class="hint">Aucune compétence définie.</span>'}
+      </fieldset>
+      ${textareaField(`e-${collection}-${i}-desc`, 'Description (une phrase)', item.description)}
+      ${textareaField(`e-${collection}-${i}-points`, 'Points clés (un par ligne)', (item.points_cles || []).join('\n'))}
+      ${collection === 'projets' ? textField(`e-${collection}-${i}-tech`, 'Technologies (séparées par des virgules)', (item.technologies || []).join(', ')) : ''}
+      ${collection === 'projets' ? `<label class="field field-checkbox"><input type="checkbox" id="e-${collection}-${i}-placeholder" ${item.placeholder ? 'checked' : ''}><span>Marquer "À compléter"</span></label>` : ''}
+    </div>`).join('') || '<p class="hint">Aucune entrée pour l\'instant.</p>';
+
+  list.forEach((item, i) => {
+    const bindText = (suffix, cb) => {
+      const node = document.getElementById(`e-${collection}-${i}-${suffix}`);
+      if (node) node.addEventListener('input', (e) => { cb(e.target.value); updateOutput(); });
+    };
+    bindText('titre', v => { item.titre = v; assignAutoId(item); refreshEntryTitleDom(collection, i); });
+    bindText('org', v => { item.organisation = v; });
+    if (collection === 'formations') bindText('etab', v => { item.etablissement = v; });
+    bindText('lieu', v => { item.lieu = v; });
+    bindText('debut', v => { item.debut = v ? Number(v) : null; });
+    bindText('fin', v => { item.fin = v ? Number(v) : null; });
+    bindText('desc', v => { item.description = v; });
+    bindText('points', v => { item.points_cles = v.split('\n').map(s => s.trim()).filter(Boolean); });
+    if (collection === 'projets') bindText('tech', v => { item.technologies = v.split(',').map(s => s.trim()).filter(Boolean); });
+
+    const actuelBox = document.getElementById(`e-${collection}-${i}-actuel`);
+    if (actuelBox) actuelBox.addEventListener('change', (e) => {
+      item.actuel = e.target.checked;
+      const finInput = document.getElementById(`e-${collection}-${i}-fin`);
+      if (finInput) finInput.disabled = item.actuel;
+      if (item.actuel) item.fin = null;
+      updateOutput();
+    });
+
+    const typeSel = document.getElementById(`e-${collection}-${i}-type`);
+    if (typeSel) typeSel.addEventListener('change', (e) => { item.type = e.target.value; updateOutput(); });
+
+    document.querySelectorAll(`.e-${collection}-${i}-dom`).forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        toggleInArray(item.domaines, e.target.dataset.key, e.target.checked);
+        updateOutput();
+      });
+    });
+    document.querySelectorAll(`.e-${collection}-${i}-comp`).forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        toggleInArray(item.competences, e.target.dataset.key, e.target.checked);
+        updateOutput();
+      });
+    });
+
+    if (collection === 'projets') {
+      const ph = document.getElementById(`e-${collection}-${i}-placeholder`);
+      if (ph) ph.addEventListener('change', (e) => { item.placeholder = e.target.checked; updateOutput(); });
+    }
+  });
+
+  // Attribue un id automatique aux seules entrées qui n'en ont pas encore
+  // (ex. import de data.js malformé) — ne touche jamais un id déjà présent,
+  // sinon rouvrir l'éditeur renommerait silencieusement toutes les entrées.
+  list.forEach(item => { if (!item.id && item.titre) assignAutoId(item); });
+
+  function refreshEntryTitleDom(coll, idx) {
+    const card = el.children[idx];
+    if (!card) return;
+    const item = state[coll][idx];
+    const strong = card.querySelector('.entry-card-head strong');
+    const idBadge = card.querySelector('.entry-card-head .taxo-id');
+    if (strong) strong.textContent = item.titre || `${ENTRY_LABELS[coll].slice(0, -1)} #${idx + 1}`;
+    if (idBadge) idBadge.textContent = item.id;
+  }
+}
+
+function toggleInArray(arr, value, add) {
+  const i = arr.indexOf(value);
+  if (add && i === -1) arr.push(value);
+  if (!add && i !== -1) arr.splice(i, 1);
+}
+
+function assignAutoId(item) {
+  if (item.titre) {
+    item.id = uniqueId(slugify(item.titre), new Set([...allEntryIds()].filter(x => x !== item.id)));
+  }
+}
+
+// ── Langues ──────────────────────────────────────────────────────────────────
+
+function buildLanguesSection() {
+  const c = document.getElementById('section-langues');
+  c.innerHTML = `
+    <h2>Langues</h2>
+    <div id="langues-list"></div>
+    <button type="button" class="btn-add" id="langues-add">+ Ajouter</button>`;
+  renderLanguesList();
+  document.getElementById('langues-add').addEventListener('click', () => {
+    state.langues.push({ langue: '', niveau: '' });
+    renderLanguesList();
+    updateOutput();
+  });
+}
+
+function renderLanguesList() {
+  const el = document.getElementById('langues-list');
+  el.innerHTML = state.langues.map((l, i) => `
+    <div class="taxo-row">
+      <input type="text" data-i="${i}" data-f="langue" value="${escapeHtml(l.langue)}" placeholder="Langue">
+      <input type="text" data-i="${i}" data-f="niveau" value="${escapeHtml(l.niveau)}" placeholder="Niveau">
+      <button type="button" class="btn-remove" data-i="${i}">✕</button>
+    </div>`).join('') || '<p class="hint">Aucune langue.</p>';
+
+  el.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const i = Number(e.target.dataset.i);
+      const f = e.target.dataset.f;
+      state.langues[i][f] = e.target.value;
+      updateOutput();
+    });
+  });
+  el.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = Number(e.target.dataset.i);
+      state.langues.splice(i, 1);
+      renderLanguesList();
+      updateOutput();
+    });
+  });
+}
+
+// ── Actions globales ─────────────────────────────────────────────────────────
+
+function downloadDataJs() {
+  const blob = new Blob([generateDataJs()], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'data.js';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function openPreview() {
+  try {
+    sessionStorage.setItem('cvPreviewData', JSON.stringify(toOutputCV()));
+    window.open('preview.html', '_blank');
+  } catch (e) {
+    alert("Impossible de lancer l'aperçu : " + e.message);
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  state = loadInitialState();
+
+  buildThemeSection();
+  buildProfilSection();
+  buildContactSection();
+  buildTaxonomieSection();
+  buildEntriesSection('experiences');
+  buildEntriesSection('formations');
+  buildEntriesSection('projets');
+  buildLanguesSection();
+  updateOutput();
+
+  document.getElementById('btn-preview').addEventListener('click', openPreview);
+  document.getElementById('btn-download').addEventListener('click', downloadDataJs);
+});
