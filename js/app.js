@@ -45,14 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
     renderLangues();
     renderView('timeline');
 
-    document.querySelectorAll('.view-btn').forEach(btn => {
+    document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view-btn[data-view]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeFilter = null;
         renderView(btn.dataset.view);
       });
     });
+
+    const printBtn = document.getElementById('btn-print');
+    if (printBtn) printBtn.addEventListener('click', () => window.print());
   } catch (e) {
     renderValidationErrors([`Erreur inattendue au chargement : ${e.message}`]);
   }
@@ -69,6 +72,20 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => {
     renderTimeline(document.getElementById('content'));
   }, 120);
+});
+
+// La frise (positionnement absolu en pixels) se prête mal à la pagination
+// papier — on bascule temporairement sur la liste simple pour l'impression,
+// puis on revient à l'affichage normal une fois l'aperçu fermé.
+window.addEventListener('beforeprint', () => {
+  if (currentView === 'timeline') {
+    renderTimelineList(document.getElementById('content'), getAllItems());
+  }
+});
+window.addEventListener('afterprint', () => {
+  if (currentView === 'timeline') {
+    renderTimeline(document.getElementById('content'));
+  }
 });
 
 // ── Validation ───────────────────────────────────────────────────────────────

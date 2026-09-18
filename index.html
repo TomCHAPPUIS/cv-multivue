@@ -4,6 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CV</title>
+  <meta name="description" content="CV personnel interactif — navigable par ordre chronologique, par domaine ou par compétence.">
+
+  <!--
+    Aperçu de partage (réseaux sociaux, messagerie) : les robots qui
+    génèrent ces aperçus n'exécutent pas JavaScript, donc ces balises ne
+    peuvent pas se remplir automatiquement depuis js/data.js. Si vous
+    voulez un aperçu personnalisé avec votre nom, éditez les lignes
+    ci-dessous à la main après avoir rempli data.js.
+  -->
+  <meta property="og:type" content="profile">
+  <meta property="og:title" content="CV">
+  <meta property="og:description" content="CV personnel interactif — navigable par ordre chronologique, par domaine ou par compétence.">
+  <meta name="twitter:card" content="summary">
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -22,6 +37,9 @@
       </button>
       <button class="view-btn" data-view="competences">
         <span class="vi">◇</span> Par compétence
+      </button>
+      <button class="view-btn" id="btn-print">
+        <span class="vi">⎙</span> Imprimer / PDF
       </button>
     </nav>
 

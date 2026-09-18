@@ -13,11 +13,19 @@ d'exemple fictives)
 
 ## Les trois vues
 
-1. **Chronologique** — timeline classique, triée par date.
+1. **Chronologique** — frise proportionnelle (position/durée proportionnelles
+   au temps) : les périodes qui se chevauchent s'affichent côte à côte au
+   lieu d'être noyées dans une liste. Repli automatique sur une liste
+   simple en dessous de 720px de large.
 2. **Par domaine** — vos expériences regroupées par thématique (ex :
    technique, management, créatif...), avec filtre.
 3. **Par compétence** — vos expériences regroupées par compétence,
    groupées par catégorie (Management / Relationnel / Technique / ...).
+
+Un bouton **Imprimer / PDF** dans la barre latérale ouvre l'aperçu
+d'impression du navigateur (Ctrl/Cmd+P fonctionne aussi) — la frise bascule
+automatiquement sur sa version liste pour l'impression, plus adaptée à la
+pagination papier.
 
 Les trois vues sont générées à partir des **mêmes données** — vous ne
 saisissez chaque expérience qu'une seule fois, en la rattachant aux
@@ -115,8 +123,9 @@ vues s'adaptent automatiquement, sans toucher au code.
 index.html        ← le site publié (générique, ne pas modifier)
 editor.html        ← formulaire de saisie (outil, pas nécessaire en prod)
 preview.html        ← aperçu utilisé par editor.html (idem)
+favicon.svg          ← icône par défaut (remplaçable)
 css/
-  style.css          ← mise en forme du site (générique)
+  style.css          ← mise en forme du site (générique, inclut l'impression)
   editor.css          ← mise en forme de l'éditeur (générique)
 js/
   data.js               ← VOS données (le seul fichier à éditer à la main)
