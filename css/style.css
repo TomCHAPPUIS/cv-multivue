@@ -380,6 +380,58 @@ body {
 .tl-bar-actuel .tl-bar-card {
   border-left-style: dashed;
 }
+/* Barre parente qui contient des sous-engagements : plus de centrage
+   vertical, une zone titre/période compacte puis la zone des sous-barres.
+   overflow visible (contrairement à .tl-bar-card standard) pour ne pas
+   couper les popovers de petits-enfants qui pourraient déborder. */
+.tl-bar-card-parent {
+  overflow: visible;
+  justify-content: flex-start;
+  padding: 0;
+  gap: 0;
+}
+.tl-bar-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem 0.15rem;
+  overflow: hidden;
+}
+.tl-bar-header .tl-bar-titre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-bar-header .tl-bar-period { flex-shrink: 0; }
+.tl-bar-children {
+  position: relative;
+  flex: 1;
+  margin: 0 4px 4px;
+}
+.tl-child-bar {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--type-bg, var(--card-bg));
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--type-color, var(--accent));
+  border-radius: 4px;
+  padding: 0 0.4rem;
+}
+.tl-child-bar.tl-bar-actuel { border-left-style: dashed; }
+.tl-child-bar-titre {
+  font-size: 0.68rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.tl-bar-expand.tl-bar-expand-sm {
+  position: static;
+  flex-shrink: 0;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.55rem;
+}
 .tl-bar-titre {
   font-size: 0.8rem;
   font-weight: 600;

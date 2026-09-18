@@ -167,6 +167,30 @@ const TIMELINE_LANE_GAP = 10;
 const TIMELINE_AXIS_H = 28;
 const TIMELINE_MOBILE_BREAKPOINT = 720; // en dessous : repli sur la liste simple
 
+// Un engagement avec des sous-engagements s'agrandit pour les contenir,
+// positionnés proportionnellement à leurs propres dates (même échelle
+// xFromLeft que le reste de la frise) plutôt que réduits à un badge.
+const TIMELINE_CHILD_HEADER_H = 32; // zone titre/période du parent quand il contient des enfants
+const TIMELINE_CHILD_ROW_H = 28;    // hauteur d'une sous-voie d'enfants
+const TIMELINE_CHILD_GAP = 4;
+
+// Hauteur nécessaire pour afficher `item` sur la frise : la hauteur normale
+// s'il n'a pas d'enfant, sinon assez pour contenir ses enfants directs
+// (répartis en sous-voies s'ils se chevauchent entre eux). Les
+// petits-enfants ne comptent pas ici : ils restent sur le badge extensible
+// porté par leur propre parent (sous-bar), pour ne pas avoir à résoudre un
+// empilement récursif de hauteurs.
+function timelineBarHeight(item, items) {
+  const kids = timelineChildrenOf(item.id, items);
+  if (!kids.length) return TIMELINE_LANE_H;
+  const kidPlaced = timelineAssignLanes(kids);
+  const kidLaneCount = kidPlaced.reduce((m, p) => Math.max(m, p.laneCount), 1);
+  const needed = TIMELINE_CHILD_HEADER_H + kidLaneCount * (TIMELINE_CHILD_ROW_H + TIMELINE_CHILD_GAP) + TIMELINE_CHILD_GAP;
+  // Ne descend jamais sous la hauteur d'une barre normale, même si les
+  // enfants tiennent sur une seule voie compacte.
+  return Math.max(TIMELINE_LANE_H, needed);
+}
+
 // Mélange une couleur hexadécimale avec du blanc, pour un fond doux qui
 // reste lisible avec du texte sombre par-dessus (la couleur pleine ne sert
 // que pour la bordure/l'accent).
@@ -301,6 +325,71 @@ function timelineAssignLanes(items) {
   return result;
 }
 
+// Rend une barre de premier niveau. Si elle a des enfants, ils sont
+// dessinés à l'intérieur, positionnés/dimensionnés sur la même échelle
+// temporelle (xFromLeft) que le reste de la frise — pas un badge, un vrai
+// sous-Gantt à une voie de profondeur.
+function renderTimelineTopBar(p, items, xFromLeft, top, height) {
+  const item = p.item;
+  const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
+  const rawLeft = xFromLeft(p.s);
+  const rawWidth = xFromLeft(p.e) - xFromLeft(p.s);
+  const width = Math.max(rawWidth, TIMELINE_MIN_BAR_W);
+  const left = rawLeft - (width - rawWidth) / 2;
+  const org = item.organisation || item.etablissement || '';
+  const bg = tintColor(type.couleur, 0.85);
+  const kids = timelineChildrenOf(item.id, items);
+
+  let inner;
+  if (kids.length) {
+    const kidPlaced = timelineAssignLanes(kids);
+    const kidsHtml = kidPlaced.map(kp => renderTimelineChildBar(kp, items, xFromLeft, left)).join('');
+    inner = `
+        <div class="tl-bar-header">
+          <strong class="tl-bar-titre">${item.titre}</strong>
+          <span class="tl-bar-period">${formatPeriode(item)}</span>
+        </div>
+        <div class="tl-bar-children">${kidsHtml}</div>`;
+  } else {
+    inner = `
+        <strong class="tl-bar-titre">${item.titre}</strong>
+        ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
+        <span class="tl-bar-period">${formatPeriode(item)}</span>`;
+  }
+
+  return `
+      <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${height}px; --type-color:${type.couleur}; --type-bg:${bg}">
+        <div class="tl-bar-card${kids.length ? ' tl-bar-card-parent' : ''}" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">${inner}
+        </div>
+      </div>`;
+}
+
+// Rend un sous-engagement à l'intérieur de la barre de son parent. S'il a
+// lui-même des enfants (petits-enfants du sommet), on revient au badge
+// extensible plutôt que d'imbriquer encore un niveau de sous-Gantt.
+function renderTimelineChildBar(kp, items, xFromLeft, parentLeftPx) {
+  const item = kp.item;
+  const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
+  const rawLeft = xFromLeft(kp.s) - parentLeftPx;
+  const rawWidth = xFromLeft(kp.e) - xFromLeft(kp.s);
+  const width = Math.max(rawWidth, 40);
+  const left = rawLeft - (width - rawWidth) / 2;
+  const top = TIMELINE_CHILD_GAP + kp.lane * (TIMELINE_CHILD_ROW_H + TIMELINE_CHILD_GAP);
+  const bg = tintColor(type.couleur, 0.7);
+  const org = item.organisation || item.etablissement || '';
+  const grandkids = timelineChildrenOf(item.id, items);
+  const expandHtml = grandkids.length ? `
+        <button type="button" class="tl-bar-expand tl-bar-expand-sm" data-id="${item.id}">+${grandkids.length}</button>
+        <div class="tl-children-popover" id="tl-children-${item.id}" hidden>
+          ${timelineChildrenTree(item.id, items)}
+        </div>` : '';
+  return `
+        <div class="tl-child-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_CHILD_ROW_H}px; --type-color:${type.couleur}; --type-bg:${bg}" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
+          <span class="tl-child-bar-titre">${item.titre}</span>
+          ${expandHtml}
+        </div>`;
+}
+
 function renderTimelineGantt(container, items) {
   const topLevel = timelineTopLevel(items);
   if (!topLevel.length) {
@@ -319,9 +408,22 @@ function renderTimelineGantt(container, items) {
   const totalWidth = Math.max(xFromLeft(max) + TIMELINE_MIN_BAR_W / 2 + 40, available);
 
   const placed = timelineAssignLanes(topLevel);
-  const maxLanes = placed.reduce((m, p) => Math.max(m, p.laneCount), 1);
-  const barsHeight = maxLanes * (TIMELINE_LANE_H + TIMELINE_LANE_GAP) + TIMELINE_LANE_GAP;
-  const totalHeight = TIMELINE_AXIS_H + barsHeight;
+  const maxLaneIndex = placed.reduce((m, p) => Math.max(m, p.lane), 0);
+  // Une voie qui contient un engagement avec des sous-engagements doit être
+  // plus haute — toutes les barres de cette voie partagent la même hauteur
+  // de ligne (comme dans un Gantt classique), même celles sans enfant.
+  const laneHeights = [];
+  for (let l = 0; l <= maxLaneIndex; l++) {
+    const inLane = placed.filter(p => p.lane === l);
+    laneHeights[l] = inLane.length ? Math.max(...inLane.map(p => timelineBarHeight(p.item, items))) : TIMELINE_LANE_H;
+  }
+  const laneTop = [];
+  let cursor = TIMELINE_LANE_GAP;
+  for (let l = 0; l <= maxLaneIndex; l++) {
+    laneTop[l] = cursor;
+    cursor += laneHeights[l] + TIMELINE_LANE_GAP;
+  }
+  const totalHeight = TIMELINE_AXIS_H + cursor;
 
   const years = [];
   for (let y = min; y <= max; y++) years.push(y);
@@ -331,32 +433,7 @@ function renderTimelineGantt(container, items) {
       <span class="tl-axis-line"></span>
     </div>`).join('');
 
-  const barsHtml = placed.map(p => {
-    const item = p.item;
-    const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
-    const rawLeft = xFromLeft(p.s);
-    const rawWidth = xFromLeft(p.e) - xFromLeft(p.s);
-    const width = Math.max(rawWidth, TIMELINE_MIN_BAR_W);
-    const left = rawLeft - (width - rawWidth) / 2;
-    const top = TIMELINE_LANE_GAP + p.lane * (TIMELINE_LANE_H + TIMELINE_LANE_GAP);
-    const org = item.organisation || item.etablissement || '';
-    const bg = tintColor(type.couleur, 0.85);
-    const kids = timelineChildrenOf(item.id, items);
-    const expandHtml = kids.length ? `
-        <button type="button" class="tl-bar-expand" data-id="${item.id}">+${kids.length}</button>
-        <div class="tl-children-popover" id="tl-children-${item.id}" hidden>
-          ${timelineChildrenTree(item.id, items)}
-        </div>` : '';
-    return `
-      <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_LANE_H}px; --type-color:${type.couleur}; --type-bg:${bg}">
-        <div class="tl-bar-card" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
-          <strong class="tl-bar-titre">${item.titre}</strong>
-          ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
-          <span class="tl-bar-period">${formatPeriode(item)}</span>
-        </div>
-        ${expandHtml}
-      </div>`;
-  }).join('');
+  const barsHtml = placed.map(p => renderTimelineTopBar(p, items, xFromLeft, laneTop[p.lane], laneHeights[p.lane])).join('');
 
   container.innerHTML = `
     <div class="tl-gantt-wrap">
