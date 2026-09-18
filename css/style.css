@@ -760,6 +760,70 @@ body {
   border-radius: 4px;
 }
 
+/* ── Glossaire (définitions cliquables) ─────────────────────────────────── */
+.glossary-term {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.glossary-term:hover, .glossary-term:focus-visible {
+  text-decoration-style: solid;
+}
+.glossary-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.glossary-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+.glossary-modal-panel {
+  position: relative;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  padding: 1.5rem 1.6rem;
+  max-width: 420px;
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.glossary-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  line-height: 1;
+}
+.glossary-modal-close:hover { color: var(--text); }
+#glossary-modal-term {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  padding-right: 1.5rem;
+}
+#glossary-modal-def {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 800px) {
   body { grid-template-columns: 1fr; }
@@ -775,6 +839,7 @@ body {
 
 /* ── Impression / export PDF ────────────────────────────────────────────── */
 @media print {
+  .glossary-modal { display: none !important; }
   body {
     display: block;
     background: #fff;

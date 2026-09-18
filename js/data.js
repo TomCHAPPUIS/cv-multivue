@@ -16,6 +16,14 @@ const CV = {
     preset: "ambre"
   },
 
+  // Réglages d'affichage — utile par exemple si toutes vos expériences sont
+  // dans la même ville : masquerTypesLieu: ["ville"] la retire de partout
+  // sans avoir à toucher chaque entrée. Les valeurs possibles dépendent des
+  // "type" que vous utilisez vous-même dans lieu[] plus bas (texte libre).
+  display: {
+    masquerTypesLieu: []
+  },
+
   // Identité publique — ce que vous accepteriez de voir sur un réseau
   // social. Volontairement AUCUN téléphone/email ici : voir CV.contact
   // ci-dessous pour ça.
@@ -75,10 +83,25 @@ const CV = {
     }
   },
 
+  // Glossaire (optionnel) : petites définitions pour les termes qui le
+  // méritent (un lieu, une institution...). N'apparaît nulle part dans la
+  // navigation — juste accessible en cliquant sur un terme qui le
+  // référence (ex. via lieu[].glossaire plus bas).
+  glossaire: {
+    "exemple-lieu": {
+      terme: "Ville",
+      definition: "Une petite explication de ce lieu : pourquoi il compte dans votre parcours, ce qui s'y est passé, etc."
+    }
+  },
+
   // Vos expériences professionnelles/associatives.
-  // Champs : id (unique), titre, organisation, lieu, debut/fin (années,
+  // Champs : id (unique), titre, organisation, debut/fin (années,
   // fin=null si actuel), actuel (bool), type (clé de taxonomie.types),
   // domaines[]/competences[] (clés de taxonomie), description, points_cles[].
+  // lieu (optionnel) : tableau de { type, valeur, glossaire? } — le "type"
+  // est du texte libre (ville, institution, antenne, salle...), à vous de
+  // choisir vos propres catégories. glossaire (optionnel) référence une clé
+  // de CV.glossaire ci-dessus pour rendre la valeur cliquable.
   // parent (optionnel) : id d'une autre entrée dont celle-ci est un
   // sous-engagement — voir README.md, section "Modèle de données".
   experiences: [
@@ -86,7 +109,10 @@ const CV = {
       id: "exemple-poste-actuel",
       titre: "Intitulé du poste",
       organisation: "Nom de l'organisation",
-      lieu: "Ville",
+      lieu: [
+        { type: "ville", valeur: "Ville", glossaire: "exemple-lieu" },
+        { type: "institution", valeur: "Nom de l'institution" }
+      ],
       debut: 2022,
       fin: null,
       actuel: true,
@@ -104,7 +130,7 @@ const CV = {
       id: "exemple-poste-precedent",
       titre: "Intitulé du poste précédent",
       organisation: "Nom de l'organisation",
-      lieu: "Ville",
+      lieu: [{ type: "ville", valeur: "Ville" }],
       debut: 2019,
       fin: 2022,
       actuel: false,
@@ -122,7 +148,7 @@ const CV = {
       id: "exemple-sous-engagement",
       titre: "Exemple de sous-engagement",
       organisation: "Nom de l'organisation",
-      lieu: "Ville",
+      lieu: [{ type: "ville", valeur: "Ville" }],
       debut: 2023,
       fin: 2023,
       actuel: false,
@@ -142,7 +168,7 @@ const CV = {
       titre: "Intitulé du diplôme",
       organisation: "Nom du département/de la faculté",
       etablissement: "Nom de l'établissement",
-      lieu: "Ville",
+      lieu: [{ type: "ville", valeur: "Ville" }],
       debut: 2018,
       fin: 2021,
       actuel: false,
@@ -161,7 +187,6 @@ const CV = {
       id: "exemple-projet",
       titre: "Nom du projet",
       organisation: "Projet personnel",
-      lieu: null,
       debut: 2024,
       fin: null,
       actuel: true,

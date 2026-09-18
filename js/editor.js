@@ -46,21 +46,24 @@ const DRAFT_KEY = 'cvEditorDraft';
 function defaultState() {
   return {
     theme: { preset: 'ambre', overrides: {} },
+    display: { masquerTypesLieu: [] },
     profil: { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: { mode: 'mailto', email: '', formAction: '' },
     taxonomie: { domaines: {}, types: {}, competences: {} },
+    glossaire: {},
     experiences: [], formations: [], projets: [], langues: []
   };
 }
 
-// Convertit un objet CV "au format data.js" (taxonomie indexée par id) vers
-// la forme interne de l'éditeur (taxonomie en tableaux, pour add/remove/CRUD
+// Convertit un objet CV "au format data.js" (taxonomie/glossaire indexés par
+// id) vers la forme interne de l'éditeur (tableaux, pour add/remove/CRUD
 // facile). Point d'entrée commun pour : les données du site (CV), un
 // brouillon relu depuis localStorage, ou un fichier importé.
 function normalizeState(src) {
   src = src || {};
   return {
     theme: src.theme || { preset: 'ambre', overrides: {} },
+    display: { masquerTypesLieu: (src.display && src.display.masquerTypesLieu) || [] },
     profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: src.contact || { mode: 'mailto', email: '', formAction: '' },
     taxonomie: {
@@ -68,6 +71,7 @@ function normalizeState(src) {
       types: objToArr(src.taxonomie && src.taxonomie.types),
       competences: objToArr(src.taxonomie && src.taxonomie.competences)
     },
+    glossaire: objToArr(src.glossaire),
     experiences: src.experiences || [],
     formations: src.formations || [],
     projets: src.projets || [],
@@ -121,6 +125,7 @@ function importFromText(text) {
 function toOutputCV() {
   return {
     theme: state.theme,
+    display: state.display,
     profil: state.profil,
     contact: state.contact,
     taxonomie: {
@@ -128,6 +133,7 @@ function toOutputCV() {
       types: arrToObj(state.taxonomie.types),
       competences: arrToObj(state.taxonomie.competences)
     },
+    glossaire: arrToObj(state.glossaire),
     experiences: state.experiences,
     formations: state.formations,
     projets: state.projets,
@@ -179,9 +185,21 @@ function updateOutput() {
 
 // ── Thème ────────────────────────────────────────────────────────────────────
 
+// Types de lieu réellement utilisés dans les entrées actuelles (le champ
+// "type" d'un lieu est du texte libre, pas une taxonomie fermée — cette
+// liste sert uniquement à proposer les bons réglages d'affichage/masquage.
+function allLieuTypes() {
+  const s = new Set();
+  ['experiences', 'formations', 'projets'].forEach(k => {
+    state[k].forEach(item => (item.lieu || []).forEach(l => { if (l.type) s.add(l.type); }));
+  });
+  return [...s].sort();
+}
+
 function buildThemeSection() {
   const c = document.getElementById('section-theme');
   const presets = ['ambre', 'ocean', 'foret', 'mono'];
+  const lieuTypes = allLieuTypes();
   c.innerHTML = `
     <h2>Apparence</h2>
     <label class="field">
@@ -190,11 +208,28 @@ function buildThemeSection() {
         ${presets.map(p => `<option value="${p}" ${state.theme.preset === p ? 'selected' : ''}>${p}</option>`).join('')}
       </select>
     </label>
-    <p class="hint">Pour une couleur d'accent personnalisée par-dessus la palette, éditez <code>overrides</code> directement dans le fichier généré — voir README.</p>`;
+    <p class="hint">Pour une couleur d'accent personnalisée par-dessus la palette, éditez <code>overrides</code> directement dans le fichier généré — voir README.</p>
+    ${lieuTypes.length ? `
+      <div class="field">
+        <span>Types de lieu à afficher</span>
+        <p class="hint">Utile par exemple si toutes vos expériences sont dans la même ville : décochez "ville" pour ne pas la répéter partout, en gardant "institution" affiché.</p>
+        ${lieuTypes.map(t => `
+          <label class="field-checkbox"><input type="checkbox" class="display-lieu-type" data-type="${escapeHtml(t)}" ${state.display.masquerTypesLieu.includes(t) ? '' : 'checked'}><span>${escapeHtml(t)}</span></label>`).join('')}
+      </div>` : ''}`;
 
   document.getElementById('theme-preset').addEventListener('change', (e) => {
     state.theme.preset = e.target.value;
     updateOutput();
+  });
+  c.querySelectorAll('.display-lieu-type').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const t = e.target.dataset.type;
+      const hidden = state.display.masquerTypesLieu;
+      const idx = hidden.indexOf(t);
+      if (e.target.checked && idx !== -1) hidden.splice(idx, 1);
+      if (!e.target.checked && idx === -1) hidden.push(t);
+      updateOutput();
+    });
   });
 }
 
@@ -380,6 +415,57 @@ function buildTaxonomieSection() {
   });
 }
 
+function allGlossaireIds() {
+  return new Set(state.glossaire.map(g => g.id));
+}
+
+function buildGlossaireSection() {
+  const c = document.getElementById('section-glossaire');
+  c.innerHTML = `
+    <h2>Glossaire</h2>
+    <p class="hint">Petites définitions pour les termes qui le méritent (un lieu, une institution...) — n'apparaissent nulle part dans la navigation du site, juste accessibles en cliquant sur le terme une fois référencé (ex. depuis un "Lieu" d'une expérience, section suivante).</p>
+    <div id="glossaire-list"></div>
+    <button type="button" class="btn-add" id="glossaire-add">+ Ajouter un terme</button>`;
+
+  renderGlossaireList();
+  document.getElementById('glossaire-add').addEventListener('click', () => {
+    const id = uniqueId(slugify('terme'), allGlossaireIds());
+    state.glossaire.push({ id, terme: 'Nouveau terme', definition: '' });
+    renderGlossaireList();
+    refreshEntrySections();
+    updateOutput();
+  });
+}
+
+function renderGlossaireList() {
+  const list = state.glossaire;
+  const el = document.getElementById('glossaire-list');
+  el.innerHTML = list.map((g, i) => `
+    <div class="taxo-row">
+      <input type="text" data-i="${i}" data-f="terme" value="${escapeHtml(g.terme)}" placeholder="Terme">
+      <input type="text" data-i="${i}" data-f="definition" value="${escapeHtml(g.definition)}" placeholder="Définition">
+      <button type="button" class="btn-remove" data-i="${i}">✕</button>
+    </div>`).join('') || '<p class="hint">Aucun terme.</p>';
+
+  el.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const i = Number(e.target.dataset.i);
+      const f = e.target.dataset.f;
+      state.glossaire[i][f] = e.target.value;
+      updateOutput();
+    });
+  });
+  el.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = Number(e.target.dataset.i);
+      state.glossaire.splice(i, 1);
+      renderGlossaireList();
+      refreshEntrySections();
+      updateOutput();
+    });
+  });
+}
+
 function renderTaxoList(kind) {
   const list = state.taxonomie[kind];
   const el = document.getElementById(`taxo-list-${kind}`);
@@ -448,6 +534,53 @@ function buildEntriesSection(collection) {
   });
 }
 
+function lieuRowHtml(li, l) {
+  const glossOptions = state.glossaire.map(g =>
+    `<option value="${escapeHtml(g.id)}" ${l.glossaire === g.id ? 'selected' : ''}>${escapeHtml(g.terme)}</option>`
+  ).join('');
+  return `<div class="taxo-row">
+    <input type="text" data-li="${li}" data-f="type" value="${escapeHtml(l.type || '')}" placeholder="Type (ville, institution...)">
+    <input type="text" data-li="${li}" data-f="valeur" value="${escapeHtml(l.valeur || '')}" placeholder="Valeur">
+    <select data-li="${li}" data-f="glossaire">
+      <option value="">Sans définition</option>
+      ${glossOptions}
+    </select>
+    <button type="button" class="btn-remove" data-li="${li}">✕</button>
+  </div>`;
+}
+
+// Rend (et recâble) les lignes "Lieu" d'une entrée précise — appelée au
+// premier rendu de la carte, puis à chaque ajout/suppression de ligne.
+function renderLieuRows(collection, i) {
+  const item = state[collection][i];
+  const lieux = item.lieu || (item.lieu = []);
+  const wrap = document.getElementById(`e-${collection}-${i}-lieu-rows`);
+  if (!wrap) return;
+  wrap.innerHTML = lieux.map((l, li) => lieuRowHtml(li, l)).join('') || '<p class="hint">Aucun lieu ajouté.</p>';
+
+  wrap.querySelectorAll('input, select').forEach(inp => {
+    const evt = inp.tagName === 'SELECT' ? 'change' : 'input';
+    inp.addEventListener(evt, (e) => {
+      const li = Number(e.target.dataset.li);
+      const f = e.target.dataset.f;
+      lieux[li][f] = e.target.value || undefined;
+      // Les réglages "types de lieu à afficher" (section Apparence)
+      // dépendent des types réellement utilisés — on les tient à jour.
+      if (f === 'type') buildThemeSection();
+      updateOutput();
+    });
+  });
+  wrap.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const li = Number(e.target.dataset.li);
+      lieux.splice(li, 1);
+      renderLieuRows(collection, i);
+      buildThemeSection();
+      updateOutput();
+    });
+  });
+}
+
 function renderEntryCards(collection) {
   const list = state[collection];
   const el = document.getElementById(`entries-list-${collection}`);
@@ -464,7 +597,11 @@ function renderEntryCards(collection) {
       ${textField(`e-${collection}-${i}-titre`, 'Titre', item.titre)}
       ${textField(`e-${collection}-${i}-org`, collection === 'formations' ? 'Département / faculté' : 'Organisation', item.organisation)}
       ${collection === 'formations' ? textField(`e-${collection}-${i}-etab`, 'Établissement', item.etablissement || '') : ''}
-      ${textField(`e-${collection}-${i}-lieu`, 'Lieu', item.lieu || '')}
+      <div class="field">
+        <span>Lieu</span>
+        <div id="e-${collection}-${i}-lieu-rows"></div>
+        <button type="button" class="btn-add" id="e-${collection}-${i}-lieu-add">+ Ajouter un lieu</button>
+      </div>
       <div class="field-row">
         <label class="field"><span>Début</span><input type="number" id="e-${collection}-${i}-debut" value="${item.debut ?? ''}"></label>
         <label class="field"><span>Fin</span><input type="number" id="e-${collection}-${i}-fin" value="${item.fin ?? ''}" ${item.actuel ? 'disabled' : ''}></label>
@@ -510,7 +647,6 @@ function renderEntryCards(collection) {
     bindText('titre', v => { item.titre = v; assignAutoId(item); refreshEntryTitleDom(collection, i); });
     bindText('org', v => { item.organisation = v; });
     if (collection === 'formations') bindText('etab', v => { item.etablissement = v; });
-    bindText('lieu', v => { item.lieu = v; });
     bindText('debut', v => { item.debut = v ? Number(v) : null; });
     bindText('fin', v => { item.fin = v ? Number(v) : null; });
     bindText('desc', v => { item.description = v; });
@@ -531,6 +667,14 @@ function renderEntryCards(collection) {
 
     const parentSel = document.getElementById(`e-${collection}-${i}-parent`);
     if (parentSel) parentSel.addEventListener('change', (e) => { item.parent = e.target.value || undefined; updateOutput(); });
+
+    renderLieuRows(collection, i);
+    const lieuAddBtn = document.getElementById(`e-${collection}-${i}-lieu-add`);
+    if (lieuAddBtn) lieuAddBtn.addEventListener('click', () => {
+      (item.lieu || (item.lieu = [])).push({ type: '', valeur: '' });
+      renderLieuRows(collection, i);
+      updateOutput();
+    });
 
     document.querySelectorAll(`.e-${collection}-${i}-dom`).forEach(cb => {
       cb.addEventListener('change', (e) => {
@@ -659,6 +803,7 @@ function rebuildAllSections() {
   buildProfilSection();
   buildContactSection();
   buildTaxonomieSection();
+  buildGlossaireSection();
   buildEntriesSection('experiences');
   buildEntriesSection('formations');
   buildEntriesSection('projets');

@@ -61,12 +61,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Referme toute popover de la frise (détail ou sous-engagements) dès qu'on
-// clique ailleurs — évite d'en accumuler plusieurs ouvertes en même temps.
-// Un seul listener posé une fois, valable pour tous les rendus successifs
-// de la frise (les popovers sont retrouvées via leur classe commune).
-document.addEventListener('click', () => {
-  document.querySelectorAll('.tl-popover:not([hidden])').forEach(p => { p.hidden = true; });
+// Un seul listener posé une fois, valable pour tous les rendus successifs :
+// - referme toute popover de la frise dont le clic n'est pas à l'intérieur
+//   (évite d'en accumuler plusieurs ouvertes, sans bloquer les clics sur du
+//   contenu À L'INTÉRIEUR d'une popover déjà ouverte — ex. un terme de
+//   glossaire dans le détail complet d'une entrée) ;
+// - ouvre le glossaire si le clic vient d'un terme référencé, où qu'il soit
+//   (carte normale, ou imbriqué dans une popover de la frise).
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.tl-popover:not([hidden])').forEach(p => {
+    if (!p.contains(e.target)) p.hidden = true;
+  });
+  const glossBtn = e.target.closest('.glossary-term');
+  if (glossBtn) openGlossaryModal(glossBtn.dataset.glossaryId);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeGlossaryModal();
 });
 
 // La frise chronologique s'adapte en continu à la largeur de la fenêtre :
@@ -478,12 +488,6 @@ function renderTimelineGantt(container, items) {
       if (popover) popover.hidden = !popover.hidden;
     });
   });
-  // Un clic à l'intérieur d'une popover ne doit pas la refermer elle-même
-  // (voir le listener document-level dans l'init, qui ferme tout au clic
-  // extérieur).
-  container.querySelectorAll('.tl-popover').forEach(p => {
-    p.addEventListener('click', (e) => e.stopPropagation());
-  });
 }
 
 // ── Domain view ───────────────────────────────────────────────────────────────
@@ -609,6 +613,61 @@ function renderCompetences(container) {
   });
 }
 
+// ── Glossaire (définitions cliquables) ──────────────────────────────────────
+// CV.glossaire (optionnel) : dictionnaire id -> { terme, definition }. Un
+// lieu (ou toute autre valeur, à l'avenir) peut référencer une entrée du
+// glossaire — elle devient alors cliquable et ouvre une petite définition,
+// sans jamais apparaître dans la navigation du site.
+
+function ensureGlossaryModal() {
+  if (document.getElementById('glossary-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'glossary-modal';
+  modal.className = 'glossary-modal';
+  modal.hidden = true;
+  modal.innerHTML = `
+    <div class="glossary-modal-backdrop"></div>
+    <div class="glossary-modal-panel" role="dialog" aria-modal="true">
+      <button type="button" class="glossary-modal-close" aria-label="Fermer">✕</button>
+      <h3 id="glossary-modal-term"></h3>
+      <p id="glossary-modal-def"></p>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.glossary-modal-backdrop').addEventListener('click', closeGlossaryModal);
+  modal.querySelector('.glossary-modal-close').addEventListener('click', closeGlossaryModal);
+}
+
+function openGlossaryModal(id) {
+  const entry = CV.glossaire && CV.glossaire[id];
+  if (!entry) return;
+  ensureGlossaryModal();
+  document.getElementById('glossary-modal-term').textContent = entry.terme || '';
+  document.getElementById('glossary-modal-def').textContent = entry.definition || '';
+  document.getElementById('glossary-modal').hidden = false;
+}
+
+function closeGlossaryModal() {
+  const modal = document.getElementById('glossary-modal');
+  if (modal) modal.hidden = true;
+}
+
+// Lieux visibles pour une entrée : filtre ceux dont le "type" est masqué
+// via CV.display.masquerTypesLieu (réglage global, ex. "je travaille
+// toujours dans la même ville, inutile de l'afficher partout").
+function visibleLieux(item) {
+  const hidden = (CV.display && CV.display.masquerTypesLieu) || [];
+  return (item.lieu || []).filter(l => l && l.valeur && !hidden.includes(l.type));
+}
+
+function formatLieuHtml(item) {
+  return visibleLieux(item).map(l => {
+    if (l.glossaire && CV.glossaire && CV.glossaire[l.glossaire]) {
+      return `<button type="button" class="glossary-term" data-glossary-id="${l.glossaire}">${l.valeur}</button>`;
+    }
+    return l.valeur;
+  }).join(' · ');
+}
+
 // ── Card renderers ────────────────────────────────────────────────────────────
 
 function renderCardFull(item) {
@@ -628,11 +687,14 @@ function renderCardFull(item) {
   const placeholder = item.placeholder
     ? `<span class="badge-placeholder">À compléter</span>` : '';
 
+  const lieuHtml = formatLieuHtml(item);
+  const orgLine = [org, lieuHtml].filter(Boolean).join(' · ');
+
   return `<div class="card">
     <div class="card-top">
       <div>
         <h3 class="card-titre">${item.titre}</h3>
-        ${org ? `<p class="card-org">${org}${item.lieu ? ' · ' + item.lieu : ''}</p>` : ''}
+        ${orgLine ? `<p class="card-org">${orgLine}</p>` : ''}
       </div>
       <div class="card-badges">
         <span class="badge-type" style="--type-color:${type.couleur}">${type.label}</span>

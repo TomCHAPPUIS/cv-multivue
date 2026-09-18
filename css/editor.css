@@ -134,6 +134,16 @@
   min-width: 0;
 }
 .taxo-row input[type="color"] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 5px; }
+.taxo-row select {
+  flex-shrink: 0;
+  max-width: 160px;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+}
 
 .btn-add, .btn-remove {
   border: 1px dashed var(--border);

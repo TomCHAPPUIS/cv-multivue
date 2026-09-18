@@ -22,6 +22,12 @@ function validateCV(cv) {
     }
   });
 
+  // CV.glossaire est optionnel, mais s'il existe il doit être bien formé —
+  // les entrées "lieu" plus bas vérifient que leurs références y pointent.
+  if (cv.glossaire != null && typeof cv.glossaire !== 'object') {
+    errors.push('CV.glossaire doit être un objet (ou absent).');
+  }
+
   const seenIds = new Set();
   const allItems = []; // pour la vérif des références "parent", qui peuvent pointer vers une autre collection
   const collections = { experiences: cv.experiences, formations: cv.formations, projets: cv.projets };
@@ -52,6 +58,19 @@ function validateCV(cv) {
           errors.push(`CV.${name} ${label} : compétence "${comp}" absente de CV.taxonomie.competences.`);
         }
       });
+
+      if (item.lieu != null) {
+        if (!Array.isArray(item.lieu)) {
+          errors.push(`CV.${name} ${label} : lieu doit être un tableau (ex. [{ type: "ville", valeur: "Genève" }]).`);
+        } else {
+          item.lieu.forEach((l, li) => {
+            if (!l || !l.valeur) errors.push(`CV.${name} ${label} : lieu[${li}] sans "valeur".`);
+            if (l && l.glossaire && (!cv.glossaire || !cv.glossaire[l.glossaire])) {
+              errors.push(`CV.${name} ${label} : lieu[${li}] référence le glossaire "${l.glossaire}", introuvable dans CV.glossaire.`);
+            }
+          });
+        }
+      }
 
       allItems.push({ collection: name, item, label });
     });
