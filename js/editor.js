@@ -151,6 +151,15 @@ function allEntryIds() {
   return s;
 }
 
+// Toutes les entrées (3 collections confondues), pour le sélecteur "Sous-
+// engagement de" — un parent peut se trouver dans n'importe quelle
+// collection.
+function allEntriesFlat() {
+  const out = [];
+  ['experiences', 'formations', 'projets'].forEach(k => state[k].forEach(e => out.push(e)));
+  return out;
+}
+
 // ── Sortie live (validation + code généré) ─────────────────────────────────
 
 function updateOutput() {
@@ -468,6 +477,15 @@ function renderEntryCards(collection) {
           ${types.map(t => `<option value="${escapeHtml(t.id)}" ${item.type === t.id ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
         </select>
       </label>
+      <label class="field">
+        <span>Sous-engagement de</span>
+        <select id="e-${collection}-${i}-parent">
+          <option value="">— aucun (engagement principal) —</option>
+          ${allEntriesFlat().filter(e => e.id !== item.id).map(e =>
+            `<option value="${escapeHtml(e.id)}" ${item.parent === e.id ? 'selected' : ''}>${escapeHtml(e.titre) || '(sans titre)'}</option>`
+          ).join('')}
+        </select>
+      </label>
       <fieldset class="chip-group">
         <legend>Domaines</legend>
         ${domaines.map(d => `
@@ -510,6 +528,9 @@ function renderEntryCards(collection) {
 
     const typeSel = document.getElementById(`e-${collection}-${i}-type`);
     if (typeSel) typeSel.addEventListener('change', (e) => { item.type = e.target.value; updateOutput(); });
+
+    const parentSel = document.getElementById(`e-${collection}-${i}-parent`);
+    if (parentSel) parentSel.addEventListener('change', (e) => { item.parent = e.target.value || undefined; updateOutput(); });
 
     document.querySelectorAll(`.e-${collection}-${i}-dom`).forEach(cb => {
       cb.addEventListener('change', (e) => {

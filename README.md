@@ -110,6 +110,14 @@ couches :
   compétences). `formations` ajoute `etablissement` ; `projets` ajoute
   `technologies[]` et un flag `placeholder` (affiche un badge "À
   compléter", à retirer une fois l'entrée finalisée).
+  - `parent` (optionnel) : id d'une autre entrée (n'importe quelle
+    collection) dont celle-ci est un sous-engagement — utile pour détailler
+    un engagement long (ex. une présidence) sans lui faire perdre en
+    lisibilité sur la frise. Une entrée avec `parent` n'a pas sa propre
+    barre : elle apparaît dans un badge extensible sur la barre de son
+    parent (chaîne aussi profonde que voulu, ex.
+    engagement → sous-engagement → tâche). Validé par `validateCV` (id
+    inconnu, auto-référence et cycles détectés).
 - **`CV.langues`** — liste indépendante, affichée en bas de la barre
   latérale.
 

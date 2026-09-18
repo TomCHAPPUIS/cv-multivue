@@ -187,14 +187,49 @@ function renderTimeline(container) {
   }
 }
 
+// Une entrée avec "parent" est un sous-engagement d'une autre entrée
+// (n'importe quelle collection) — elle n'a pas sa propre barre/voie dans la
+// frise, elle apparaît encapsulée dans celle de son parent. La chaîne peut
+// être aussi profonde que voulu (engagement -> sous-engagement -> tâche...),
+// il n'y a pas de notion de "niveau" explicite dans le schéma.
+function timelineTopLevel(items) {
+  return items.filter(it => !it.parent);
+}
+
+function timelineChildrenOf(parentId, items) {
+  return items.filter(it => it.parent === parentId);
+}
+
+// visited protège contre un cycle qui aurait échappé à validateCV (défense
+// en profondeur — un cycle bloque normalement l'affichage bien avant ici).
+function timelineChildrenTree(parentId, items, visited) {
+  visited = visited || new Set();
+  if (visited.has(parentId)) return '';
+  visited = new Set(visited);
+  visited.add(parentId);
+
+  const kids = timelineChildrenOf(parentId, items);
+  if (!kids.length) return '';
+  return `<ul class="tl-children-list">${kids.map(k => {
+    const org = k.organisation || k.etablissement || '';
+    return `<li>
+      <span class="tl-child-titre">${k.titre}</span>${org ? `<span class="tl-child-org"> — ${org}</span>` : ''}
+      <span class="tl-child-period">${formatPeriode(k)}</span>
+      ${timelineChildrenTree(k.id, items, visited)}
+    </li>`;
+  }).join('')}</ul>`;
+}
+
 function renderTimelineList(container, items) {
-  container.innerHTML = `<div class="timeline">${items.map(item => `
+  const topLevel = timelineTopLevel(items);
+  container.innerHTML = `<div class="timeline">${topLevel.map(item => `
     <div class="timeline-item">
       <div class="timeline-date">
         <span>${formatPeriode(item)}</span>
       </div>
       <div class="timeline-card">
         ${renderCardFull(item)}
+        ${timelineChildrenTree(item.id, items)}
       </div>
     </div>`).join('')}
   </div>`;
@@ -267,11 +302,12 @@ function timelineAssignLanes(items) {
 }
 
 function renderTimelineGantt(container, items) {
-  if (!items.length) {
+  const topLevel = timelineTopLevel(items);
+  if (!topLevel.length) {
     container.innerHTML = '<p class="hint">Aucune entrée.</p>';
     return;
   }
-  const { min, max } = timelineBounds(items);
+  const { min, max } = timelineBounds(topLevel);
   const now = new Date().getFullYear();
   const yearSpan = Math.max(max - min, 1);
   // Étire la frise pour remplir la largeur disponible plutôt que de laisser
@@ -282,7 +318,7 @@ function renderTimelineGantt(container, items) {
   const xFromLeft = (year) => (year - min) * pxPerYear;
   const totalWidth = Math.max(xFromLeft(max) + TIMELINE_MIN_BAR_W / 2 + 40, available);
 
-  const placed = timelineAssignLanes(items);
+  const placed = timelineAssignLanes(topLevel);
   const maxLanes = placed.reduce((m, p) => Math.max(m, p.laneCount), 1);
   const barsHeight = maxLanes * (TIMELINE_LANE_H + TIMELINE_LANE_GAP) + TIMELINE_LANE_GAP;
   const totalHeight = TIMELINE_AXIS_H + barsHeight;
@@ -305,6 +341,12 @@ function renderTimelineGantt(container, items) {
     const top = TIMELINE_LANE_GAP + p.lane * (TIMELINE_LANE_H + TIMELINE_LANE_GAP);
     const org = item.organisation || item.etablissement || '';
     const bg = tintColor(type.couleur, 0.85);
+    const kids = timelineChildrenOf(item.id, items);
+    const expandHtml = kids.length ? `
+        <button type="button" class="tl-bar-expand" data-id="${item.id}">+${kids.length}</button>
+        <div class="tl-children-popover" id="tl-children-${item.id}" hidden>
+          ${timelineChildrenTree(item.id, items)}
+        </div>` : '';
     return `
       <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_LANE_H}px; --type-color:${type.couleur}; --type-bg:${bg}">
         <div class="tl-bar-card" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
@@ -312,6 +354,7 @@ function renderTimelineGantt(container, items) {
           ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
           <span class="tl-bar-period">${formatPeriode(item)}</span>
         </div>
+        ${expandHtml}
       </div>`;
   }).join('');
 
@@ -322,6 +365,14 @@ function renderTimelineGantt(container, items) {
         <div class="tl-gantt-bars" style="top:${TIMELINE_AXIS_H}px">${barsHtml}</div>
       </div>
     </div>`;
+
+  container.querySelectorAll('.tl-bar-expand').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const popover = document.getElementById(`tl-children-${btn.dataset.id}`);
+      if (popover) popover.hidden = !popover.hidden;
+    });
+  });
 }
 
 // ── Domain view ───────────────────────────────────────────────────────────────

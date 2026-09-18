@@ -309,6 +309,7 @@ body {
 /* ── Frise proportionnelle (Gantt compact, horizontale) ─────────────────── */
 .tl-gantt-wrap {
   overflow-x: auto;
+  overflow-y: visible; /* laisse les popovers de sous-engagements déborder verticalement */
   padding-bottom: 0.5rem;
 }
 .tl-gantt {
@@ -398,6 +399,61 @@ body {
   font-size: 0.65rem;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* Badge + popover des sous-engagements ("héritage" d'entrées) */
+.tl-bar-expand {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--type-color, var(--accent));
+  background: var(--card-bg);
+  border: 1px solid var(--type-color, var(--accent));
+  border-radius: 999px;
+  padding: 0.18rem 0.4rem;
+}
+.tl-bar-expand:hover { background: var(--type-color, var(--accent)); color: #fff; }
+.tl-children-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  z-index: 20;
+  min-width: 220px;
+  max-width: 320px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  padding: 0.5rem 0.65rem;
+}
+.tl-children-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+}
+.tl-children-list .tl-children-list {
+  margin: 0.3rem 0 0 0.8rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border);
+}
+.tl-child-titre { font-size: 0.78rem; font-weight: 600; }
+.tl-child-org { font-size: 0.72rem; color: var(--text-muted); }
+.tl-child-period { font-size: 0.68rem; color: var(--text-muted); margin-left: 0.4rem; white-space: nowrap; }
+
+/* Dans la vue liste simple (mobile/impression), la liste des
+   sous-engagements est ajoutée directement sous la carte, toujours visible
+   (pas de popover à déplier, on est déjà dans un flux vertical simple). */
+.timeline-card > .tl-children-list {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 
 /* ── Cards (full) ────────────────────────────────────────────────────────── */

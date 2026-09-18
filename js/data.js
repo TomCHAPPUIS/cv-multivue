@@ -79,6 +79,8 @@ const CV = {
   // Champs : id (unique), titre, organisation, lieu, debut/fin (années,
   // fin=null si actuel), actuel (bool), type (clé de taxonomie.types),
   // domaines[]/competences[] (clés de taxonomie), description, points_cles[].
+  // parent (optionnel) : id d'une autre entrée dont celle-ci est un
+  // sous-engagement — voir README.md, section "Modèle de données".
   experiences: [
     {
       id: "exemple-poste-actuel",
@@ -111,6 +113,25 @@ const CV = {
       competences: ["communication", "design"],
       description: "Une phrase résumant le poste.",
       points_cles: ["Réalisation concrète #1", "Réalisation concrète #2"]
+    },
+    {
+      // Exemple de sous-engagement : n'apparaît pas comme une barre à part
+      // sur la frise, mais dans un badge extensible sur la barre du poste
+      // ci-dessus (grâce à "parent"). Pratique pour détailler un engagement
+      // long sans surcharger la frise principale.
+      id: "exemple-sous-engagement",
+      titre: "Exemple de sous-engagement",
+      organisation: "Nom de l'organisation",
+      lieu: "Ville",
+      debut: 2023,
+      fin: 2023,
+      actuel: false,
+      type: "emploi",
+      domaines: ["management"],
+      competences: [],
+      description: "Un projet ou une tâche ponctuelle rattaché au poste principal.",
+      points_cles: [],
+      parent: "exemple-poste-actuel"
     }
   ],
 

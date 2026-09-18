@@ -23,6 +23,7 @@ function validateCV(cv) {
   });
 
   const seenIds = new Set();
+  const allItems = []; // pour la vérif des références "parent", qui peuvent pointer vers une autre collection
   const collections = { experiences: cv.experiences, formations: cv.formations, projets: cv.projets };
   Object.entries(collections).forEach(([name, list]) => {
     if (!Array.isArray(list)) {
@@ -51,7 +52,38 @@ function validateCV(cv) {
           errors.push(`CV.${name} ${label} : compétence "${comp}" absente de CV.taxonomie.competences.`);
         }
       });
+
+      allItems.push({ collection: name, item, label });
     });
+  });
+
+  // Références "parent" (sous-engagement d'une autre entrée, toutes
+  // collections confondues) : doit exister, pas d'auto-référence, pas de
+  // cycle (sinon l'affichage de la frise boucle à l'infini).
+  const byId = new Map(allItems.map(e => [e.item.id, e]));
+  allItems.forEach(({ collection, item, label }) => {
+    if (item.parent == null || item.parent === '') return;
+    if (item.parent === item.id) {
+      errors.push(`CV.${collection} ${label} : parent ne peut pas se référencer lui-même.`);
+      return;
+    }
+    if (!byId.has(item.parent)) {
+      errors.push(`CV.${collection} ${label} : parent "${item.parent}" introuvable (aucune entrée avec cet id).`);
+      return;
+    }
+    // Détection de cycle : en remontant les parents depuis cette entrée, on
+    // ne doit jamais retomber sur elle-même.
+    const seen = new Set([item.id]);
+    let cursor = item.parent;
+    while (cursor != null && cursor !== '') {
+      if (seen.has(cursor)) {
+        errors.push(`CV.${collection} ${label} : référence "parent" cyclique détectée.`);
+        break;
+      }
+      seen.add(cursor);
+      const next = byId.get(cursor);
+      cursor = next ? next.item.parent : null;
+    }
   });
 
   return errors;
