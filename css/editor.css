@@ -74,6 +74,34 @@
 .editor-section h2 { font-size: 1rem; margin-bottom: 0.5rem; }
 .editor-section h3 { font-size: 0.88rem; margin: 0.8rem 0 0.4rem; color: var(--text-muted); }
 
+/* Sections repliables (<details>/<summary>) — le formulaire devient long,
+   permet de replier ce qu'on ne modifie pas pour l'instant. */
+.editor-section > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  user-select: none;
+}
+.editor-section > summary::-webkit-details-marker { display: none; }
+.editor-section > summary h2 { margin-bottom: 0; }
+.editor-section > summary::after {
+  content: '▸';
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+}
+.editor-section[open] > summary::after { transform: rotate(90deg); }
+.editor-section[open] > summary {
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+.editor-section > summary:hover h2 { color: var(--accent); }
+
 .field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.7rem; font-size: 0.82rem; }
 .field span { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .field input[type="text"],

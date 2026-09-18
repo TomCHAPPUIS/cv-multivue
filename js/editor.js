@@ -201,7 +201,7 @@ function buildThemeSection() {
   const presets = ['ambre', 'ocean', 'foret', 'mono'];
   const lieuTypes = allLieuTypes();
   c.innerHTML = `
-    <h2>Apparence</h2>
+    <summary><h2>Apparence</h2></summary>
     <label class="field">
       <span>Palette</span>
       <select id="theme-preset">
@@ -263,7 +263,7 @@ function buildProfilSection() {
   const p = state.profil;
   const paysConnu = PAYS_LIST.includes(p.pays);
   c.innerHTML = `
-    <h2>Identité publique</h2>
+    <summary><h2>Identité publique</h2></summary>
     <p class="hint">Ce que vous accepteriez de voir sur un réseau social. Aucun téléphone/email ici — voir la section Contact.</p>
     ${textField('p-nom', 'Nom', p.nom)}
     ${textField('p-titre', 'Titre', p.titre)}
@@ -348,7 +348,7 @@ function buildContactSection() {
   const c = document.getElementById('section-contact');
   const ct = state.contact;
   c.innerHTML = `
-    <h2>Contact</h2>
+    <summary><h2>Contact</h2></summary>
     <p class="hint">Jamais affiché en clair dans le code de la page en mode formulaire — voir README pour le détail du compromis.</p>
     <label class="field">
       <span>Mode</span>
@@ -391,7 +391,7 @@ const TAXO_LABELS = { domaines: 'Domaines', types: 'Types', competences: 'Compé
 function buildTaxonomieSection() {
   const c = document.getElementById('section-taxonomie');
   c.innerHTML = `
-    <h2>Taxonomie</h2>
+    <summary><h2>Taxonomie</h2></summary>
     <p class="hint">Vos propres catégories, utilisées comme filtres dans les cases à cocher des expériences/formations/projets ci-dessous. Pour renommer une catégorie sans perdre les entrées qui l'utilisent, changez juste son libellé (la référence interne reste stable) ; pour la remplacer entièrement, supprimez-la et recréez-en une.</p>
     ${Object.keys(TAXO_LABELS).map(kind => `
       <div class="taxo-block">
@@ -422,7 +422,7 @@ function allGlossaireIds() {
 function buildGlossaireSection() {
   const c = document.getElementById('section-glossaire');
   c.innerHTML = `
-    <h2>Glossaire</h2>
+    <summary><h2>Glossaire</h2></summary>
     <p class="hint">Petites définitions pour les termes qui le méritent (un lieu, une institution...) — n'apparaissent nulle part dans la navigation du site, juste accessibles en cliquant sur le terme une fois référencé (ex. depuis un "Lieu" d'une expérience, section suivante).</p>
     <div id="glossaire-list"></div>
     <button type="button" class="btn-add" id="glossaire-add">+ Ajouter un terme</button>`;
@@ -522,7 +522,7 @@ function newEntry(collection) {
 function buildEntriesSection(collection) {
   const c = document.getElementById(`section-${collection}`);
   c.innerHTML = `
-    <h2>${ENTRY_LABELS[collection]}</h2>
+    <summary><h2>${ENTRY_LABELS[collection]}</h2></summary>
     <div id="entries-list-${collection}"></div>
     <button type="button" class="btn-add" id="entries-add-${collection}">+ Ajouter</button>`;
 
@@ -735,7 +735,7 @@ function assignAutoId(item) {
 function buildLanguesSection() {
   const c = document.getElementById('section-langues');
   c.innerHTML = `
-    <h2>Langues</h2>
+    <summary><h2>Langues</h2></summary>
     <div id="langues-list"></div>
     <button type="button" class="btn-add" id="langues-add">+ Ajouter</button>`;
   renderLanguesList();
