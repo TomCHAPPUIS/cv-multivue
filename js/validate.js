@@ -16,10 +16,42 @@ function validateCV(cv) {
     errors.push('CV.taxonomie est manquant.');
     return errors;
   }
-  ['domaines', 'types', 'competences'].forEach(key => {
+  ['milieux', 'types', 'competences'].forEach(key => {
     if (!cv.taxonomie[key] || typeof cv.taxonomie[key] !== 'object') {
       errors.push(`CV.taxonomie.${key} est manquant ou n'est pas un objet.`);
     }
+  });
+
+  // Hiérarchie interne de milieux/competences : une entrée peut référencer
+  // une autre de la même table via "parent" (racine = sans parent, ex. un
+  // domaine de compétences ; feuille = avec parent, ex. une compétence
+  // précise qui s'y rattache). Même mécanisme et mêmes risques que le
+  // "parent" des entrées CV plus bas : existence, auto-référence, cycle.
+  ['milieux', 'competences'].forEach(key => {
+    const table = cv.taxonomie[key];
+    if (!table || typeof table !== 'object') return;
+    Object.entries(table).forEach(([id, entry]) => {
+      if (!entry || entry.parent == null || entry.parent === '') return;
+      if (entry.parent === id) {
+        errors.push(`CV.taxonomie.${key}.${id} : parent ne peut pas se référencer lui-même.`);
+        return;
+      }
+      if (!table[entry.parent]) {
+        errors.push(`CV.taxonomie.${key}.${id} : parent "${entry.parent}" introuvable dans CV.taxonomie.${key}.`);
+        return;
+      }
+      const seen = new Set([id]);
+      let cursor = entry.parent;
+      while (cursor != null && cursor !== '') {
+        if (seen.has(cursor)) {
+          errors.push(`CV.taxonomie.${key}.${id} : référence "parent" cyclique détectée.`);
+          break;
+        }
+        seen.add(cursor);
+        const next = table[cursor];
+        cursor = next ? next.parent : null;
+      }
+    });
   });
 
   // CV.glossaire est optionnel, mais s'il existe il doit être bien formé —
@@ -48,9 +80,9 @@ function validateCV(cv) {
       if (item.type && cv.taxonomie.types && !cv.taxonomie.types[item.type]) {
         errors.push(`CV.${name} ${label} : type "${item.type}" absent de CV.taxonomie.types.`);
       }
-      (item.domaines || []).forEach(d => {
-        if (cv.taxonomie.domaines && !cv.taxonomie.domaines[d]) {
-          errors.push(`CV.${name} ${label} : domaine "${d}" absent de CV.taxonomie.domaines.`);
+      (item.milieux || []).forEach(m => {
+        if (cv.taxonomie.milieux && !cv.taxonomie.milieux[m]) {
+          errors.push(`CV.${name} ${label} : milieu "${m}" absent de CV.taxonomie.milieux.`);
         }
       });
       (item.competences || []).forEach(comp => {

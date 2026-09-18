@@ -635,7 +635,7 @@ body {
   padding: 0.18rem 0.5rem;
   border-radius: 4px;
 }
-.tag-dom {
+.tag-milieu {
   background: color-mix(in srgb, var(--tag-color) 13%, transparent);
   color: var(--tag-color);
 }
@@ -679,8 +679,16 @@ body {
   color: var(--text-muted);
 }
 
-/* ── Domain / section headers ────────────────────────────────────────────── */
-.domaine-block { margin-bottom: 2.5rem; }
+/* ── Milieu / section headers ────────────────────────────────────────────── */
+.milieu-block { margin-bottom: 2.5rem; }
+.milieu-sub-block { margin: 0.7rem 0 0.7rem 1.2rem; }
+.milieu-sub-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
 .section-header {
   display: flex;
   align-items: baseline;

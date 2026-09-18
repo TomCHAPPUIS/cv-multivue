@@ -154,16 +154,16 @@ function renderView(view) {
 
   const titles = {
     timeline:   'Parcours chronologique',
-    domaines:   'Par domaine',
+    milieux:    'Par milieu',
     competences:'Par compétence'
   };
   header.innerHTML = `<h2>${titles[view]}</h2>`;
 
   if (view === 'timeline') {
     renderTimeline(content);
-  } else if (view === 'domaines') {
-    renderDomaineFilters(filters);
-    renderDomaines(content);
+  } else if (view === 'milieux') {
+    renderMilieuFilters(filters);
+    renderMilieux(content);
   } else if (view === 'competences') {
     renderCompetenceFilters(filters);
     renderCompetences(content);
@@ -490,51 +490,88 @@ function renderTimelineGantt(container, items) {
   });
 }
 
-// ── Domain view ───────────────────────────────────────────────────────────────
+// ── Milieu view ──────────────────────────────────────────────────────────────
+// CV.taxonomie.milieux : le secteur/contexte de l'organisation (PAS la
+// compétence exercée — voir la vue Compétence plus bas). Hiérarchie à deux
+// niveaux : une entrée sans "parent" est un milieu racine, une entrée avec
+// "parent" est une sous-catégorie de ce milieu. Une expérience peut
+// référencer directement une racine ou une sous-catégorie.
 
-function renderDomaineFilters(container) {
-  const domaines = CV.taxonomie.domaines;
-  let html = `<p class="filter-label">Filtrer</p>
-    <button class="filter-btn ${!activeFilter ? 'active' : ''}" data-filter="all">Tous les domaines</button>`;
+// Racine d'une entrée de taxonomie (elle-même si elle n'a pas de parent, ou
+// si son parent est absent de la table — défense en profondeur, un cycle ou
+// une référence cassée est de toute façon signalée par validateCV).
+function taxoRootId(table, id) {
+  const entry = table[id];
+  if (!entry || !entry.parent || !table[entry.parent]) return id;
+  return entry.parent;
+}
 
-  Object.entries(domaines).forEach(([key, dom]) => {
+function taxoChildren(table, rootId) {
+  return Object.entries(table).filter(([id, e]) => id !== rootId && e.parent === rootId);
+}
+
+function renderMilieuFilters(container) {
+  const milieux = CV.taxonomie.milieux;
+  const roots = Object.entries(milieux).filter(([, m]) => !m.parent);
+  let html = `<p class="filter-label">Filtrer — dans quels milieux ?</p>
+    <button class="filter-btn ${!activeFilter ? 'active' : ''}" data-filter="all">Tous les milieux</button>`;
+
+  roots.forEach(([key, m]) => {
     html += `<button class="filter-btn ${activeFilter === key ? 'active' : ''}"
-      data-filter="${key}" style="--tag-color:${dom.couleur}">${dom.label}</button>`;
+      data-filter="${key}" style="--tag-color:${m.couleur}">${m.label}</button>`;
   });
 
   container.innerHTML = html;
   container.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeFilter = btn.dataset.filter === 'all' ? null : btn.dataset.filter;
-      renderView('domaines');
+      renderView('milieux');
     });
   });
 }
 
-function renderDomaines(container) {
+function renderMilieux(container) {
   const items = getAllItems();
-  const domaines = CV.taxonomie.domaines;
+  const milieux = CV.taxonomie.milieux;
   let html = '';
 
   if (activeFilter) {
-    const dom   = domaines[activeFilter];
-    const liste = items.filter(i => i.domaines?.includes(activeFilter));
-    html = `<div class="section-header" style="--accent-color:${dom.couleur}">
-      <h3>${dom.label}</h3><span class="count">${liste.length} entrée${liste.length > 1 ? 's' : ''}</span>
+    const m = milieux[activeFilter];
+    const descendantIds = new Set([activeFilter, ...taxoChildren(milieux, activeFilter).map(([id]) => id)]);
+    const liste = items.filter(i => i.milieux?.some(id => descendantIds.has(id)));
+    html = `<div class="section-header" style="--accent-color:${m.couleur}">
+      <h3>${m.label}</h3><span class="count">${liste.length} entrée${liste.length > 1 ? 's' : ''}</span>
     </div>
     <div class="cards-grid">${liste.map(i => `<div>${renderCardFull(i)}</div>`).join('')}</div>`;
   } else {
-    Object.entries(domaines).forEach(([key, dom]) => {
-      const liste = items.filter(i => i.domaines?.includes(key));
+    const roots = Object.entries(milieux).filter(([, m]) => !m.parent);
+    roots.forEach(([key, m]) => {
+      const children = taxoChildren(milieux, key);
+      const descendantIds = new Set([key, ...children.map(([id]) => id)]);
+      const liste = items.filter(i => i.milieux?.some(id => descendantIds.has(id)));
       if (!liste.length) return;
-      html += `<div class="domaine-block">
-        <div class="section-header clickable" style="--accent-color:${dom.couleur}" data-filter="${key}">
-          <h3>${dom.label}</h3>
+
+      // Au sein du bloc racine, les entrées taguées directement avec une
+      // sous-catégorie sont regroupées sous elle ; celles taguées avec la
+      // racine elle-même restent au niveau du bloc.
+      let childrenHtml = '';
+      children.forEach(([childId, child]) => {
+        const childListe = items.filter(i => i.milieux?.includes(childId));
+        if (!childListe.length) return;
+        childrenHtml += `<div class="milieu-sub-block">
+          <h4 class="milieu-sub-title">${child.label}</h4>
+          <div class="compact-list">${childListe.map(i => renderCardCompact(i)).join('')}</div>
+        </div>`;
+      });
+      const directListe = items.filter(i => i.milieux?.includes(key));
+
+      html += `<div class="milieu-block">
+        <div class="section-header clickable" style="--accent-color:${m.couleur}" data-filter="${key}">
+          <h3>${m.label}</h3>
           <span class="count">${liste.length} entrée${liste.length > 1 ? 's' : ''} — cliquer pour détails</span>
         </div>
-        <div class="compact-list">
-          ${liste.map(i => renderCardCompact(i)).join('')}
-        </div>
+        ${directListe.length ? `<div class="compact-list">${directListe.map(i => renderCardCompact(i)).join('')}</div>` : ''}
+        ${childrenHtml}
       </div>`;
     });
   }
@@ -543,7 +580,7 @@ function renderDomaines(container) {
   container.querySelectorAll('.section-header.clickable').forEach(el => {
     el.addEventListener('click', () => {
       activeFilter = el.dataset.filter;
-      renderView('domaines');
+      renderView('milieux');
     });
   });
 }
@@ -552,12 +589,12 @@ function renderDomaines(container) {
 
 function renderCompetenceFilters(container) {
   const groupes = groupCompetences();
-  let html = `<p class="filter-label">Filtrer</p>
+  let html = `<p class="filter-label">Filtrer — à quels métiers ?</p>
     <button class="filter-btn ${!activeFilter ? 'active' : ''}" data-filter="all">Toutes</button>`;
 
-  Object.entries(groupes).forEach(([groupe, comps]) => {
-    html += `<p class="filter-group-label">${groupe}</p>`;
-    comps.forEach(c => {
+  Object.entries(groupes).forEach(([, groupe]) => {
+    html += `<p class="filter-group-label">${groupe.label}</p>`;
+    groupe.comps.forEach(c => {
       html += `<button class="filter-btn ${activeFilter === c.key ? 'active' : ''}"
         data-filter="${c.key}">${c.label}</button>`;
     });
@@ -585,8 +622,9 @@ function renderCompetences(container) {
     <div class="cards-grid">${liste.map(i => `<div>${renderCardFull(i)}</div>`).join('')}</div>`;
   } else {
     const groupes = groupCompetences();
-    Object.entries(groupes).forEach(([groupe, comps]) => {
-      html += `<div class="comp-group-block"><h3 class="comp-group-title">${groupe}</h3>`;
+    Object.entries(groupes).forEach(([, groupe]) => {
+      html += `<div class="comp-group-block"><h3 class="comp-group-title">${groupe.label}</h3>`;
+      const comps = groupe.comps;
       comps.forEach(comp => {
         const liste = items.filter(i => i.competences?.includes(comp.key));
         if (!liste.length) return;
@@ -673,9 +711,9 @@ function formatLieuHtml(item) {
 function renderCardFull(item) {
   const type  = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
   const org   = item.organisation || item.etablissement || '';
-  const domTags = (item.domaines || []).map(d => {
-    const dom = CV.taxonomie.domaines[d];
-    return dom ? `<span class="tag tag-dom" style="--tag-color:${dom.couleur}">${dom.label}</span>` : '';
+  const milieuTags = (item.milieux || []).map(m => {
+    const milieu = CV.taxonomie.milieux[m];
+    return milieu ? `<span class="tag tag-milieu" style="--tag-color:${milieu.couleur}">${milieu.label}</span>` : '';
   }).join('');
 
   const points = item.points_cles?.length
@@ -704,7 +742,7 @@ function renderCardFull(item) {
     ${item.description ? `<p class="card-desc">${item.description}</p>` : ''}
     ${points}
     ${techs}
-    ${domTags ? `<div class="card-tags">${domTags}</div>` : ''}
+    ${milieuTags ? `<div class="card-tags">${milieuTags}</div>` : ''}
   </div>`;
 }
 
@@ -781,11 +819,21 @@ function renderLangues() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// CV.taxonomie.competences : ce que fait LA PERSONNE (vue "Par compétence"),
+// indépendamment du milieu où elle l'a exercé — voir la vue Milieu plus haut.
+// Une entrée sans "parent" est un domaine de compétences (catégorie, ex.
+// "Informatique et données") ; les compétences précises listées dessous ont
+// "parent" pointant vers ce domaine. Regroupe donc les compétences (entrées
+// avec parent) par leur domaine racine.
 function groupCompetences() {
+  const table = CV.taxonomie.competences;
   const groupes = {};
-  Object.entries(CV.taxonomie.competences).forEach(([key, comp]) => {
-    if (!groupes[comp.groupe]) groupes[comp.groupe] = [];
-    groupes[comp.groupe].push({ key, ...comp });
+  Object.entries(table).forEach(([key, comp]) => {
+    if (!comp.parent) return; // domaine de compétences (racine), pas une compétence à lister elle-même
+    const rootId = taxoRootId(table, key);
+    const root = table[rootId];
+    if (!groupes[rootId]) groupes[rootId] = { label: root ? root.label : rootId, comps: [] };
+    groupes[rootId].comps.push({ key, ...comp });
   });
   return groupes;
 }

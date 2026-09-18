@@ -49,7 +49,7 @@ function defaultState() {
     display: { masquerTypesLieu: [] },
     profil: { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: { mode: 'mailto', email: '', formAction: '' },
-    taxonomie: { domaines: {}, types: {}, competences: {} },
+    taxonomie: { milieux: {}, types: {}, competences: {} },
     glossaire: {},
     experiences: [], formations: [], projets: [], langues: []
   };
@@ -67,7 +67,7 @@ function normalizeState(src) {
     profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: src.contact || { mode: 'mailto', email: '', formAction: '' },
     taxonomie: {
-      domaines: objToArr(src.taxonomie && src.taxonomie.domaines),
+      milieux: objToArr(src.taxonomie && src.taxonomie.milieux),
       types: objToArr(src.taxonomie && src.taxonomie.types),
       competences: objToArr(src.taxonomie && src.taxonomie.competences)
     },
@@ -139,7 +139,7 @@ function toOutputCV() {
     profil: state.profil,
     contact: state.contact,
     taxonomie: {
-      domaines: arrToObj(state.taxonomie.domaines),
+      milieux: arrToObj(state.taxonomie.milieux),
       types: arrToObj(state.taxonomie.types),
       competences: arrToObj(state.taxonomie.competences)
     },
@@ -157,7 +157,7 @@ function generateDataJs() {
 
 function allTaxoIds() {
   const s = new Set();
-  ['domaines', 'types', 'competences'].forEach(k => state.taxonomie[k].forEach(t => s.add(t.id)));
+  ['milieux', 'types', 'competences'].forEach(k => state.taxonomie[k].forEach(t => s.add(t.id)));
   return s;
 }
 
@@ -396,7 +396,19 @@ function buildContactSection() {
 
 // ── Taxonomie ────────────────────────────────────────────────────────────────
 
-const TAXO_LABELS = { domaines: 'Domaines', types: 'Types', competences: 'Compétences' };
+const TAXO_LABELS = { milieux: 'Milieux', types: 'Types', competences: 'Compétences' };
+const TAXO_HINTS = {
+  milieux: "Le secteur/contexte de l'organisation (pas la compétence exercée). Une entrée sans parent est un milieu racine ; avec un parent, c'est une sous-catégorie de ce milieu.",
+  types: 'Nature de l\'entrée (badge affiché sur chaque carte).',
+  competences: "Ce que VOUS avez fait, indépendamment du secteur. Une entrée sans parent est un domaine de compétences (catégorie) ; avec un parent, c'est une compétence précise qui s'y rattache."
+};
+
+// Une entrée de taxonomie peut avoir un "parent" (autre entrée de la même
+// table) pour former une hiérarchie à deux niveaux. Pas pour "types", qui
+// reste une liste plate.
+function taxoHasHierarchy(kind) {
+  return kind === 'milieux' || kind === 'competences';
+}
 
 function buildTaxonomieSection() {
   const c = document.getElementById('section-taxonomie');
@@ -406,6 +418,7 @@ function buildTaxonomieSection() {
     ${Object.keys(TAXO_LABELS).map(kind => `
       <div class="taxo-block">
         <h3>${TAXO_LABELS[kind]}</h3>
+        <p class="hint">${TAXO_HINTS[kind]}</p>
         <div id="taxo-list-${kind}"></div>
         <button type="button" class="btn-add" id="taxo-add-${kind}">+ Ajouter</button>
       </div>`).join('')}`;
@@ -415,7 +428,7 @@ function buildTaxonomieSection() {
     document.getElementById(`taxo-add-${kind}`).addEventListener('click', () => {
       const id = uniqueId(slugify('nouveau'), allTaxoIds());
       const entry = kind === 'competences'
-        ? { id, label: 'Nouvelle compétence', groupe: 'Management' }
+        ? { id, label: 'Nouvelle compétence' }
         : { id, label: 'Nouveau', couleur: '#888888' };
       state.taxonomie[kind].push(entry);
       renderTaxoList(kind);
@@ -478,13 +491,20 @@ function renderGlossaireList() {
 
 function renderTaxoList(kind) {
   const list = state.taxonomie[kind];
+  const hasParent = taxoHasHierarchy(kind);
+  const hasColor = kind === 'milieux' || kind === 'types';
   const el = document.getElementById(`taxo-list-${kind}`);
   el.innerHTML = list.map((t, i) => `
     <div class="taxo-row">
       <input type="text" data-i="${i}" data-f="label" value="${escapeHtml(t.label)}" placeholder="Libellé">
-      ${kind === 'competences'
-        ? `<input type="text" data-i="${i}" data-f="groupe" value="${escapeHtml(t.groupe)}" placeholder="Groupe">`
-        : `<input type="color" data-i="${i}" data-f="couleur" value="${escapeHtml(t.couleur || '#888888')}">`}
+      ${hasColor ? `<input type="color" data-i="${i}" data-f="couleur" value="${escapeHtml(t.couleur || '#888888')}">` : ''}
+      ${hasParent ? `
+        <select data-i="${i}" data-f="parent">
+          <option value="">— racine —</option>
+          ${list.filter(o => o.id !== t.id).map(o =>
+            `<option value="${escapeHtml(o.id)}" ${t.parent === o.id ? 'selected' : ''}>${escapeHtml(o.label)}</option>`
+          ).join('')}
+        </select>` : ''}
       <button type="button" class="btn-remove" data-i="${i}">✕</button>
     </div>`).join('') || '<p class="hint">Aucune entrée.</p>';
 
@@ -496,6 +516,15 @@ function renderTaxoList(kind) {
       updateOutput();
     });
   });
+  if (hasParent) {
+    el.querySelectorAll('select').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const i = Number(e.target.dataset.i);
+        state.taxonomie[kind][i].parent = e.target.value || undefined;
+        updateOutput();
+      });
+    });
+  }
   el.querySelectorAll('.btn-remove').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const i = Number(e.target.dataset.i);
@@ -523,7 +552,7 @@ function newEntry(collection) {
     id: '', titre: '', organisation: '', lieu: '',
     debut: new Date().getFullYear(), fin: null, actuel: true,
     type: ENTRY_TYPE_DEFAULT[collection] || '',
-    domaines: [], competences: [], description: '', points_cles: [],
+    milieux: [], competences: [], description: '', points_cles: [],
     ...(collection === 'formations' ? { etablissement: '' } : {}),
     ...(collection === 'projets' ? { technologies: [], placeholder: true } : {})
   };
@@ -591,10 +620,32 @@ function renderLieuRows(collection, i) {
   });
 }
 
+// Ordonne une table de taxonomie hiérarchique (milieux/competences) pour un
+// affichage groupé dans les cases à cocher : racines puis, juste après
+// chacune, ses enfants directs (indentés). Une entrée dont le parent a été
+// supprimé entre-temps reste visible (non indentée) plutôt que de
+// disparaître silencieusement du formulaire.
+function taxoDisplayOrder(list) {
+  const byParent = new Map();
+  list.forEach(t => {
+    const p = t.parent || '';
+    if (!byParent.has(p)) byParent.set(p, []);
+    byParent.get(p).push(t);
+  });
+  const ordered = [];
+  (byParent.get('') || []).forEach(root => {
+    ordered.push({ ...root, depth: 0 });
+    (byParent.get(root.id) || []).forEach(child => ordered.push({ ...child, depth: 1 }));
+  });
+  const seen = new Set(ordered.map(o => o.id));
+  list.forEach(t => { if (!seen.has(t.id)) ordered.push({ ...t, depth: 0 }); });
+  return ordered;
+}
+
 function renderEntryCards(collection) {
   const list = state[collection];
   const el = document.getElementById(`entries-list-${collection}`);
-  const domaines = state.taxonomie.domaines;
+  const milieux = state.taxonomie.milieux;
   const types = state.taxonomie.types;
   const competences = state.taxonomie.competences;
 
@@ -634,14 +685,14 @@ function renderEntryCards(collection) {
         </select>
       </label>
       <fieldset class="chip-group">
-        <legend>Domaines</legend>
-        ${domaines.map(d => `
-          <label class="chip"><input type="checkbox" data-key="${escapeHtml(d.id)}" ${item.domaines.includes(d.id) ? 'checked' : ''} class="e-${collection}-${i}-dom">${escapeHtml(d.label)}</label>`).join('') || '<span class="hint">Aucun domaine défini.</span>'}
+        <legend>Milieux</legend>
+        ${taxoDisplayOrder(milieux).map(d => `
+          <label class="chip"><input type="checkbox" data-key="${escapeHtml(d.id)}" ${item.milieux.includes(d.id) ? 'checked' : ''} class="e-${collection}-${i}-milieu">${d.depth ? '↳ ' : ''}${escapeHtml(d.label)}</label>`).join('') || '<span class="hint">Aucun milieu défini.</span>'}
       </fieldset>
       <fieldset class="chip-group">
         <legend>Compétences</legend>
-        ${competences.map(cp => `
-          <label class="chip"><input type="checkbox" data-key="${escapeHtml(cp.id)}" ${item.competences.includes(cp.id) ? 'checked' : ''} class="e-${collection}-${i}-comp">${escapeHtml(cp.label)}</label>`).join('') || '<span class="hint">Aucune compétence définie.</span>'}
+        ${taxoDisplayOrder(competences).filter(cp => cp.parent).map(cp => `
+          <label class="chip"><input type="checkbox" data-key="${escapeHtml(cp.id)}" ${item.competences.includes(cp.id) ? 'checked' : ''} class="e-${collection}-${i}-comp">${escapeHtml(cp.label)}</label>`).join('') || '<span class="hint">Aucune compétence définie (créez d\'abord un domaine de compétences ci-dessus, puis des compétences rattachées).</span>'}
       </fieldset>
       ${textareaField(`e-${collection}-${i}-desc`, 'Description (une phrase)', item.description)}
       ${textareaField(`e-${collection}-${i}-points`, 'Points clés (un par ligne)', (item.points_cles || []).join('\n'))}
@@ -686,9 +737,9 @@ function renderEntryCards(collection) {
       updateOutput();
     });
 
-    document.querySelectorAll(`.e-${collection}-${i}-dom`).forEach(cb => {
+    document.querySelectorAll(`.e-${collection}-${i}-milieu`).forEach(cb => {
       cb.addEventListener('change', (e) => {
-        toggleInArray(item.domaines, e.target.dataset.key, e.target.checked);
+        toggleInArray(item.milieux, e.target.dataset.key, e.target.checked);
         updateOutput();
       });
     });

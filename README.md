@@ -1,7 +1,7 @@
 # cv-multivue
 
 Un CV personnel en une page, mais navigable selon trois angles différents —
-**chronologique**, **par domaine** et **par compétence** — plutôt que la
+**chronologique**, **par milieu** et **par compétence** — plutôt que la
 liste unique imposée par un CV papier ou PDF classique.
 
 Site 100% statique (HTML/CSS/JS, aucune dépendance, aucun build step) :
@@ -17,10 +17,15 @@ d'exemple fictives)
    au temps) : les périodes qui se chevauchent s'affichent côte à côte au
    lieu d'être noyées dans une liste. Repli automatique sur une liste
    simple en dessous de 720px de large.
-2. **Par domaine** — vos expériences regroupées par thématique (ex :
-   technique, management, créatif...), avec filtre.
+2. **Par milieu** — vos expériences regroupées par secteur/contexte
+   professionnel (ex : numérique, culture, santé...), avec filtre. C'est ce
+   que fait *l'organisation*, pas ce que vous y avez fait.
 3. **Par compétence** — vos expériences regroupées par compétence,
-   groupées par catégorie (Management / Relationnel / Technique / ...).
+   groupées par domaine de compétences (ex : Informatique et données,
+   Direction et stratégie...). C'est ce que *vous* avez fait, quel que soit
+   le secteur où vous l'avez fait — un développeur en banque et un
+   développeur dans une association ont la même compétence, dans deux
+   milieux différents.
 
 Un bouton **Imprimer / PDF** dans la barre latérale ouvre l'aperçu
 d'impression du navigateur (Ctrl/Cmd+P fonctionne aussi) — la frise bascule
@@ -29,7 +34,7 @@ pagination papier.
 
 Les trois vues sont générées à partir des **mêmes données** — vous ne
 saisissez chaque expérience qu'une seule fois, en la rattachant aux
-domaines et compétences concernés.
+milieux et compétences concernés.
 
 ## Démarrage rapide
 
@@ -106,17 +111,42 @@ couches :
     adresse visible dans le code ; en contrepartie, dépend d'un service
     tiers que vous configurez vous-même (rien à héberger de votre côté).
 - **`CV.taxonomie`** — trois tables de référence qui définissent votre
-  propre vocabulaire : `domaines`, `types`, `competences`. Chaque entrée a
-  un id court (ex. `technique`), un `label` affiché et, pour
-  domaines/types, une `couleur`. Entièrement personnalisable : renommez,
+  propre vocabulaire : `milieux`, `types`, `competences`. Chaque entrée a
+  un id court (ex. `numerique`), un `label` affiché et, pour
+  milieux/types, une `couleur`. Entièrement personnalisable : renommez,
   ajoutez ou supprimez des entrées librement.
+
+  `milieux` et `competences` sont **deux axes volontairement séparés**,
+  qui répondent chacun à une question différente :
+  - `milieux` — ce que fait *l'organisation* (son secteur d'activité :
+    numérique, santé, culture...).
+  - `competences` — ce que fait *la personne* (le type de travail
+    exercé : gestion de projet, développement logiciel...).
+
+  Les deux se croisent librement sur une même expérience : un
+  développeur en banque = milieu `finance` × compétence
+  `developpement-logiciel`. Ne codez jamais une expérience d'après le mot
+  qui "sonne juste" — `informatique` existe des deux côtés (un milieu
+  *et* un domaine de compétences), et ce n'est pas un défaut du modèle.
+
+  Ces deux tables supportent en plus une **hiérarchie à deux niveaux** :
+  une entrée sans `parent` est une racine (un milieu, ou un *domaine de
+  compétences* comme "Informatique et données") ; une entrée avec
+  `parent` (l'id d'une autre entrée de la même table) en est une
+  sous-catégorie (ex. "Développement logiciel" sous "Informatique et
+  données"). `validateCV` vérifie ces références comme celles de
+  `parent` sur les entrées (existence, auto-référence, cycle — voir
+  plus bas). Une expérience peut référencer une racine ou une
+  sous-catégorie indifféremment dans `milieux[]` ; pour `competences[]`,
+  seules les sous-catégories ont vocation à être référencées — la racine
+  n'est qu'un en-tête de regroupement pour la vue "Par compétence".
 - **Les entrées** — `CV.experiences`, `CV.formations`, `CV.projets` :
   trois listes qui partagent un schéma commun (`id`, `titre`,
-  `organisation`, `debut`/`fin`, `actuel`, `type`, `domaines[]`,
+  `organisation`, `debut`/`fin`, `actuel`, `type`, `milieux[]`,
   `competences[]`, `description`, `points_cles[]`). `type` référence une
-  clé de `taxonomie.types` ; `domaines[]`/`competences[]` référencent des
-  clés de `taxonomie.domaines`/`taxonomie.competences` (relations
-  many-to-many : une expérience peut toucher plusieurs domaines et
+  clé de `taxonomie.types` ; `milieux[]`/`competences[]` référencent des
+  clés de `taxonomie.milieux`/`taxonomie.competences` (relations
+  many-to-many : une expérience peut toucher plusieurs milieux et
   compétences). `formations` ajoute `etablissement` ; `projets` ajoute
   `technologies[]` et un flag `placeholder` (affiche un badge "À
   compléter", à retirer une fois l'entrée finalisée).

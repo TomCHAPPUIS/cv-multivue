@@ -54,16 +54,27 @@ const CV = {
   },
 
   // Tables de référence : chaque entrée ci-dessous n'est qu'un EXEMPLE.
-  // Renommez/ajoutez/supprimez librement les clés (culture, technique, ...) —
-  // elles servent uniquement de clés étrangères depuis vos entrées plus bas.
+  // Renommez/ajoutez/supprimez librement les clés — elles servent
+  // uniquement de clés étrangères depuis vos entrées plus bas.
+  //
+  // Deux axes volontairement séparés (voir "Modèle de données" du README) :
+  //   - milieux      : ce que fait L'ORGANISATION (son secteur).
+  //   - competences  : ce que fait LA PERSONNE (le travail exercé),
+  //                    indépendamment du secteur où elle l'a exercé.
+  // Un développeur en banque = milieu "finance" × compétence "développement".
   taxonomie: {
-    // Domaines : catégories thématiques (vue "Par domaine").
-    domaines: {
-      management:    { label: "Gestion & organisation", couleur: "#7c3aed" },
-      technique:     { label: "Technique",               couleur: "#d97706" },
-      creatif:       { label: "Créatif",                 couleur: "#059669" },
-      communication: { label: "Communication",           couleur: "#2563eb" },
-      formation:     { label: "Formation",                couleur: "#b91c1c" }
+    // Milieux : le secteur/contexte de l'organisation (vue "Par milieu").
+    // Hiérarchie à deux niveaux : une entrée sans "parent" est un milieu
+    // racine ; avec "parent", une sous-catégorie de ce milieu. Une
+    // expérience peut référencer directement une racine ou une sous-catégorie.
+    milieux: {
+      numerique:                 { label: "Numérique et télécommunications", couleur: "#2563eb" },
+      "edition-logicielle-saas": { label: "Édition logicielle et SaaS",      couleur: "#2563eb", parent: "numerique" },
+      "donnees-ia":               { label: "Données et IA",                  couleur: "#2563eb", parent: "numerique" },
+      "culture-medias-sport":     { label: "Culture, médias et sport",       couleur: "#059669" },
+      "spectacle-vivant-musique": { label: "Spectacle vivant et musique",    couleur: "#059669", parent: "culture-medias-sport" },
+      "education-recherche":      { label: "Éducation, formation et recherche", couleur: "#b91c1c" },
+      superieur:                  { label: "Supérieur",                      couleur: "#b91c1c", parent: "education-recherche" }
     },
     // Types : nature de l'entrée (badge affiché sur chaque carte).
     types: {
@@ -72,14 +83,25 @@ const CV = {
       formation:  { label: "Formation",        couleur: "#78350f" },
       projet:     { label: "Projet personnel", couleur: "#5b21b6" }
     },
-    // Compétences : groupées par catégorie (vue "Par compétence").
+    // Compétences : ce que vous avez fait (vue "Par compétence"). Même
+    // mécanisme de hiérarchie que les milieux : une entrée sans "parent" est
+    // un domaine de compétences (catégorie, ex. "Informatique et données") ;
+    // avec "parent", une compétence précise qui s'y rattache (ex.
+    // "Développement logiciel"). Seules les compétences (avec parent) sont
+    // proposées comme cases à cocher — le domaine, lui, n'est qu'un en-tête.
     competences: {
-      "gestion-projet": { label: "Gestion de projet",      groupe: "Management" },
-      "budget":         { label: "Budget & finance",       groupe: "Management" },
-      "communication":  { label: "Communication",          groupe: "Relationnel" },
-      "encadrement":    { label: "Encadrement d'équipe",   groupe: "Relationnel" },
-      "developpement":  { label: "Développement logiciel", groupe: "Technique" },
-      "design":         { label: "Design",                 groupe: "Créatif" }
+      "direction-strategie":            { label: "Direction et stratégie" },
+      "gestion-projet":                 { label: "Gestion de projet et de programme", parent: "direction-strategie" },
+      "finance-comptabilite":           { label: "Finance et comptabilité" },
+      "controle-gestion":               { label: "Contrôle de gestion", parent: "finance-comptabilite" },
+      "marketing-communication":        { label: "Marketing et communication" },
+      "communication-institutionnelle": { label: "Communication institutionnelle", parent: "marketing-communication" },
+      "ressources-humaines":            { label: "Ressources humaines" },
+      "developpement-rh":               { label: "Développement RH", parent: "ressources-humaines" },
+      "informatique-donnees":           { label: "Informatique et données" },
+      "developpement-logiciel":         { label: "Développement logiciel", parent: "informatique-donnees" },
+      "creation-contenus":              { label: "Création, design et production de contenus" },
+      "design-ux-ui":                   { label: "Design UX/UI", parent: "creation-contenus" }
     }
   },
 
@@ -97,7 +119,7 @@ const CV = {
   // Vos expériences professionnelles/associatives.
   // Champs : id (unique), titre, organisation, debut/fin (années,
   // fin=null si actuel), actuel (bool), type (clé de taxonomie.types),
-  // domaines[]/competences[] (clés de taxonomie), description, points_cles[].
+  // milieux[]/competences[] (clés de taxonomie), description, points_cles[].
   // lieu (optionnel) : tableau de { type, valeur, glossaire? } — le "type"
   // est du texte libre (ville, institution, antenne, salle...), à vous de
   // choisir vos propres catégories. glossaire (optionnel) référence une clé
@@ -117,8 +139,8 @@ const CV = {
       fin: null,
       actuel: true,
       type: "emploi",
-      domaines: ["management", "technique"],
-      competences: ["gestion-projet", "encadrement"],
+      milieux: ["edition-logicielle-saas"],
+      competences: ["gestion-projet", "developpement-rh"],
       description: "Une phrase résumant le poste.",
       points_cles: [
         "Réalisation concrète #1",
@@ -135,8 +157,8 @@ const CV = {
       fin: 2022,
       actuel: false,
       type: "associatif",
-      domaines: ["creatif", "communication"],
-      competences: ["communication", "design"],
+      milieux: ["spectacle-vivant-musique"],
+      competences: ["communication-institutionnelle", "design-ux-ui"],
       description: "Une phrase résumant le poste.",
       points_cles: ["Réalisation concrète #1", "Réalisation concrète #2"]
     },
@@ -153,7 +175,7 @@ const CV = {
       fin: 2023,
       actuel: false,
       type: "emploi",
-      domaines: ["management"],
+      milieux: ["numerique"],
       competences: [],
       description: "Un projet ou une tâche ponctuelle rattaché au poste principal.",
       points_cles: [],
@@ -173,8 +195,8 @@ const CV = {
       fin: 2021,
       actuel: false,
       type: "formation",
-      domaines: ["formation", "technique"],
-      competences: ["developpement"],
+      milieux: ["superieur"],
+      competences: ["developpement-logiciel"],
       description: "Une phrase résumant la formation."
     }
   ],
@@ -191,8 +213,8 @@ const CV = {
       fin: null,
       actuel: true,
       type: "projet",
-      domaines: ["technique"],
-      competences: ["developpement"],
+      milieux: ["donnees-ia"],
+      competences: ["developpement-logiciel"],
       technologies: ["JavaScript", "CSS"],
       description: "Une phrase résumant le projet.",
       points_cles: [],
