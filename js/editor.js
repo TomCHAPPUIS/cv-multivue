@@ -101,7 +101,17 @@ function clearDraft() {
 // sur ce site (CV, depuis data.js) ; à défaut, un état vide.
 function loadInitialState() {
   const draft = readDraft();
-  const src = draft || ((typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState());
+  // Le schéma peut évoluer (ex. "lieu" texte -> tableau) entre deux visites
+  // — un brouillon sauvegardé avant un tel changement planterait le rendu
+  // s'il était chargé tel quel. On le valide avant de lui faire confiance ;
+  // s'il ne passe plus, on l'ignore plutôt que de bloquer toute la page.
+  if (draft) {
+    const draftErrors = validateCV(draft);
+    if (draftErrors.length === 0) return normalizeState(draft);
+    console.warn('Brouillon local ignoré et effacé (ne correspond plus au schéma actuel) :', draftErrors);
+    clearDraft();
+  }
+  const src = (typeof CV !== 'undefined' && CV) ? JSON.parse(JSON.stringify(CV)) : defaultState();
   return normalizeState(src);
 }
 
@@ -811,27 +821,46 @@ function rebuildAllSections() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  state = loadInitialState();
-  rebuildAllSections();
-  updateOutput();
+  // Toute erreur inattendue ici ne doit jamais laisser la page bloquée sans
+  // porte de sortie — le bouton Réinitialiser (câblé plus bas, en dehors de
+  // ce bloc) doit rester utilisable même si le reste de l'init a échoué.
+  try {
+    state = loadInitialState();
+    rebuildAllSections();
+    updateOutput();
 
-  document.getElementById('btn-preview').addEventListener('click', openPreview);
-  document.getElementById('btn-download').addEventListener('click', downloadDataJs);
+    document.getElementById('btn-preview').addEventListener('click', openPreview);
+    document.getElementById('btn-download').addEventListener('click', downloadDataJs);
 
-  document.getElementById('btn-import').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => importFromText(reader.result);
-    reader.readAsText(file);
-    e.target.value = '';
-  });
+    document.getElementById('btn-import').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => importFromText(reader.result);
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+  } catch (e) {
+    console.error(e);
+    const form = document.querySelector('.editor-form');
+    if (form) {
+      form.innerHTML = `<div class="editor-section">
+        <h2>Erreur inattendue</h2>
+        <p class="hint">${e.message}</p>
+        <p class="hint">Cliquez sur "Réinitialiser" ci-dessus pour repartir des données publiées sur ce site.</p>
+      </div>`;
+    }
+  }
 
   document.getElementById('btn-reset').addEventListener('click', () => {
     if (!confirm("Effacer le brouillon sauvegardé dans ce navigateur et repartir des données publiées sur ce site ?")) return;
     clearDraft();
     state = loadFromPublished();
-    rebuildAllSections();
-    updateOutput();
+    try {
+      rebuildAllSections();
+      updateOutput();
+    } catch (e) {
+      console.error(e);
+    }
   });
 });
