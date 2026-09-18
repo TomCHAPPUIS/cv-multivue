@@ -418,13 +418,17 @@ body {
   padding: 0 0.4rem;
 }
 .tl-child-bar.tl-bar-actuel { border-left-style: dashed; }
-.tl-child-bar-titre {
+/* Sélecteur composé (au lieu de .tl-child-bar-titre seul) pour être sûr de
+   l'emporter sur .tl-bar-titre malgré l'ordre dans la feuille de style —
+   même spécificité sinon, résultat dépendrait de l'ordre des règles. */
+.tl-bar-titre.tl-child-bar-titre {
   font-size: 0.68rem;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  width: auto;
 }
 .tl-bar-expand.tl-bar-expand-sm {
   position: static;
@@ -433,12 +437,30 @@ body {
   font-size: 0.55rem;
 }
 .tl-bar-titre {
+  /* Réinitialisation : c'est un <button> (ouvre le détail complet au clic),
+     mais il doit se fondre visuellement dans la barre comme un simple
+     libellé, avec juste un signal d'interactivité au survol. */
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.tl-bar-titre:hover, .tl-bar-titre:focus-visible {
+  text-decoration: underline;
+  color: var(--type-color, var(--accent));
 }
 .tl-bar-org {
   font-size: 0.7rem;
@@ -468,19 +490,32 @@ body {
   padding: 0.18rem 0.4rem;
 }
 .tl-bar-expand:hover { background: var(--type-color, var(--accent)); color: #fff; }
-.tl-children-popover {
+.tl-popover {
   position: absolute;
   top: 100%;
   left: 0;
   margin-top: 4px;
   z-index: 20;
-  min-width: 220px;
-  max-width: 320px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+.tl-children-popover {
+  min-width: 220px;
+  max-width: 320px;
   padding: 0.5rem 0.65rem;
+}
+.tl-detail-popover {
+  width: 320px;
+  max-width: 90vw;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.tl-detail-popover .card {
+  border: none;
+  box-shadow: none;
+  border-radius: 6px;
 }
 .tl-children-list {
   display: flex;

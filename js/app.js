@@ -61,6 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Referme toute popover de la frise (détail ou sous-engagements) dès qu'on
+// clique ailleurs — évite d'en accumuler plusieurs ouvertes en même temps.
+// Un seul listener posé une fois, valable pour tous les rendus successifs
+// de la frise (les popovers sont retrouvées via leur classe commune).
+document.addEventListener('click', () => {
+  document.querySelectorAll('.tl-popover:not([hidden])').forEach(p => { p.hidden = true; });
+});
+
 // La frise chronologique s'adapte en continu à la largeur de la fenêtre :
 // changement de mode Gantt <-> liste au franchissement du seuil mobile, et
 // ré-échelonnage de pxPerYear à chaque redimensionnement sinon (anti-rebond
@@ -329,6 +337,17 @@ function timelineAssignLanes(items) {
 // dessinés à l'intérieur, positionnés/dimensionnés sur la même échelle
 // temporelle (xFromLeft) que le reste de la frise — pas un badge, un vrai
 // sous-Gantt à une voie de profondeur.
+// Le titre de chaque entrée (barre principale ou sous-barre) est un bouton
+// qui ouvre/ferme une popover avec le détail complet (renderCardFull) — les
+// informations qui ne tiennent pas dans une barre compacte (description,
+// points clés, technologies, tags de domaine...) restent à un clic.
+function timelineTitreButton(item, extraClass) {
+  return `<button type="button" class="tl-bar-titre tl-detail-toggle${extraClass ? ' ' + extraClass : ''}" data-detail-id="${item.id}">${item.titre}</button>`;
+}
+function timelineDetailPopover(item) {
+  return `<div class="tl-popover tl-detail-popover" id="tl-detail-${item.id}" hidden>${renderCardFull(item)}</div>`;
+}
+
 function renderTimelineTopBar(p, items, xFromLeft, top, height) {
   const item = p.item;
   const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
@@ -346,13 +365,13 @@ function renderTimelineTopBar(p, items, xFromLeft, top, height) {
     const kidsHtml = kidPlaced.map(kp => renderTimelineChildBar(kp, items, xFromLeft, left)).join('');
     inner = `
         <div class="tl-bar-header">
-          <strong class="tl-bar-titre">${item.titre}</strong>
+          ${timelineTitreButton(item)}
           <span class="tl-bar-period">${formatPeriode(item)}</span>
         </div>
         <div class="tl-bar-children">${kidsHtml}</div>`;
   } else {
     inner = `
-        <strong class="tl-bar-titre">${item.titre}</strong>
+        ${timelineTitreButton(item)}
         ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
         <span class="tl-bar-period">${formatPeriode(item)}</span>`;
   }
@@ -361,6 +380,7 @@ function renderTimelineTopBar(p, items, xFromLeft, top, height) {
       <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${height}px; --type-color:${type.couleur}; --type-bg:${bg}">
         <div class="tl-bar-card${kids.length ? ' tl-bar-card-parent' : ''}" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">${inner}
         </div>
+        ${timelineDetailPopover(item)}
       </div>`;
 }
 
@@ -380,13 +400,14 @@ function renderTimelineChildBar(kp, items, xFromLeft, parentLeftPx) {
   const grandkids = timelineChildrenOf(item.id, items);
   const expandHtml = grandkids.length ? `
         <button type="button" class="tl-bar-expand tl-bar-expand-sm" data-id="${item.id}">+${grandkids.length}</button>
-        <div class="tl-children-popover" id="tl-children-${item.id}" hidden>
+        <div class="tl-popover tl-children-popover" id="tl-children-${item.id}" hidden>
           ${timelineChildrenTree(item.id, items)}
         </div>` : '';
   return `
         <div class="tl-child-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_CHILD_ROW_H}px; --type-color:${type.couleur}; --type-bg:${bg}" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
-          <span class="tl-child-bar-titre">${item.titre}</span>
+          ${timelineTitreButton(item, 'tl-child-bar-titre')}
           ${expandHtml}
+          ${timelineDetailPopover(item)}
         </div>`;
 }
 
@@ -449,6 +470,19 @@ function renderTimelineGantt(container, items) {
       const popover = document.getElementById(`tl-children-${btn.dataset.id}`);
       if (popover) popover.hidden = !popover.hidden;
     });
+  });
+  container.querySelectorAll('.tl-detail-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const popover = document.getElementById(`tl-detail-${btn.dataset.detailId}`);
+      if (popover) popover.hidden = !popover.hidden;
+    });
+  });
+  // Un clic à l'intérieur d'une popover ne doit pas la refermer elle-même
+  // (voir le listener document-level dans l'init, qui ferme tout au clic
+  // extérieur).
+  container.querySelectorAll('.tl-popover').forEach(p => {
+    p.addEventListener('click', (e) => e.stopPropagation());
   });
 }
 
