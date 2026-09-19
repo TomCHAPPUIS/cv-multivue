@@ -154,7 +154,7 @@ function renderView(view) {
 
   const titles = {
     timeline:   'Parcours chronologique',
-    milieux:    'Par milieu',
+    milieux:    'Par milieux',
     competences:'Par compétence'
   };
   header.innerHTML = `<h2>${titles[view]}</h2>`;

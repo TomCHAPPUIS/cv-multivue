@@ -17,7 +17,7 @@ d'exemple fictives)
    au temps) : les périodes qui se chevauchent s'affichent côte à côte au
    lieu d'être noyées dans une liste. Repli automatique sur une liste
    simple en dessous de 720px de large.
-2. **Par milieu** — vos expériences regroupées par secteur/contexte
+2. **Par milieux** — vos expériences regroupées par secteur/contexte
    professionnel (ex : numérique, culture, santé...), avec filtre. C'est ce
    que fait *l'organisation*, pas ce que vous y avez fait.
 3. **Par compétence** — vos expériences regroupées par compétence,

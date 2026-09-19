@@ -63,7 +63,7 @@ const CV = {
   //                    indépendamment du secteur où elle l'a exercé.
   // Un développeur en banque = milieu "finance" × compétence "développement".
   taxonomie: {
-    // Milieux : le secteur/contexte de l'organisation (vue "Par milieu").
+    // Milieux : le secteur/contexte de l'organisation (vue "Par milieux").
     // Hiérarchie à deux niveaux : une entrée sans "parent" est un milieu
     // racine ; avec "parent", une sous-catégorie de ce milieu. Une
     // expérience peut référencer directement une racine ou une sous-catégorie.
