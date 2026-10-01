@@ -126,17 +126,46 @@ function getAllItems() {
     ...CV.formations.map(f => ({ ...f, category: 'formation' })),
     ...CV.projets.map(p => ({ ...p, category: 'projet' }))
   ];
-  return all.sort((a, b) => {
-    const aFin = a.fin ?? 9999;
-    const bFin = b.fin ?? 9999;
-    if (bFin !== aFin) return bFin - aFin;
-    return b.debut - a.debut;
-  });
+  const finIdx = (it) => (it.actuel || it.fin == null) ? Infinity : cvMonthIndex(it.fin, 'end');
+  return all.sort((a, b) =>
+    (finIdx(b) - finIdx(a)) || (cvMonthIndex(b.debut, 'start') - cvMonthIndex(a.debut, 'start')));
 }
 
-function formatPeriode(item) {
-  const fin = item.actuel ? 'auj.' : item.fin;
-  return `${item.debut}–${fin}`;
+function formatCvDate(v) {
+  const d = parseCvDate(v);
+  if (!d) return '';
+  return d.mois ? `${CV_MOIS_COURTS[d.mois - 1]} ${d.annee}` : String(d.annee);
+}
+
+// Forme compacte pour les barres de la frise, où la place manque.
+function formatCvDateCourte(v) {
+  const d = parseCvDate(v);
+  if (!d) return '';
+  return d.mois ? `${String(d.mois).padStart(2, '0')}.${d.annee}` : String(d.annee);
+}
+
+function formatPeriode(item, courte) {
+  const fmt = courte ? formatCvDateCourte : formatCvDate;
+  const debut = fmt(item.debut);
+  const fin = item.actuel ? 'auj.' : fmt(item.fin);
+  if (!fin) return debut;
+  return (!courte && (debut.includes(' ') || fin.includes(' '))) ? `${debut} – ${fin}` : `${debut}–${fin}`;
+}
+
+// ── Âge (optionnel, CV.profil.naissance) ────────────────────────────────────
+
+function birthMonthIndex() {
+  return (CV.profil && CV.profil.naissance) ? cvMonthIndex(CV.profil.naissance, 'start') : null;
+}
+
+// "24 ans" ou "24–27 ans" sur la durée d'une entrée ; vide sans date de naissance.
+function formatAgeRange(item) {
+  const b = birthMonthIndex();
+  if (b == null) return '';
+  const [s, e] = timelineItemRange(item, cvNowMonthIndex());
+  const a1 = Math.floor((s - b) / 12);
+  const a2 = Math.floor((Math.max(e - 1, s) - b) / 12);
+  return a1 === a2 ? `${a1} ans` : `${a1}–${a2} ans`;
 }
 
 // ── View dispatcher ──────────────────────────────────────────────────────────
@@ -183,6 +212,7 @@ const TIMELINE_MIN_BAR_W = 70;
 const TIMELINE_LANE_H = 72;
 const TIMELINE_LANE_GAP = 10;
 const TIMELINE_AXIS_H = 28;
+const TIMELINE_AGE_H = 20; // bande des âges sous les années, si CV.profil.naissance est renseigné
 const TIMELINE_MOBILE_BREAKPOINT = 720; // en dessous : repli sur la liste simple
 
 // Un engagement avec des sous-engagements s'agrandit pour les contenir,
@@ -268,6 +298,7 @@ function renderTimelineList(container, items) {
     <div class="timeline-item">
       <div class="timeline-date">
         <span>${formatPeriode(item)}</span>
+        ${formatAgeRange(item) ? `<span class="timeline-age">${formatAgeRange(item)}</span>` : ''}
       </div>
       <div class="timeline-card">
         ${renderCardFull(item)}
@@ -277,22 +308,65 @@ function renderTimelineList(container, items) {
   </div>`;
 }
 
+// Toutes les positions de la frise sont en mois entiers (voir cvMonthIndex).
 function timelineBounds(items) {
-  const now = new Date().getFullYear();
+  const now = cvNowMonthIndex();
   let min = now;
   let max = now;
   items.forEach(it => {
-    if (it.debut < min) min = it.debut;
-    const end = (it.actuel || it.fin == null) ? now : it.fin;
-    if (end > max) max = end;
+    const [s, e] = timelineItemRange(it, now);
+    if (s < min) min = s;
+    if (e > max) max = e;
   });
   return { min, max };
 }
 
 function timelineItemRange(item, now) {
-  const start = item.debut;
-  const end = (item.actuel || item.fin == null) ? now : item.fin;
-  return [start, end];
+  const start = cvMonthIndex(item.debut, 'start');
+  const end = (item.actuel || item.fin == null) ? now : cvMonthIndex(item.fin, 'end');
+  return [start, Math.max(start, end)];
+}
+
+// Les mois rendent visibles des interruptions de quelques semaines entre deux
+// engagements, qui n'apportent rien au lecteur et attirent l'œil sur un
+// "trou". En dessous de ce seuil, la barre précédente est prolongée
+// visuellement jusqu'à la suivante — les dates affichées restent exactes.
+// CV.display.lisserCreuxMois, 0 pour désactiver.
+function timelineLissageMois() {
+  const v = CV.display && CV.display.lisserCreuxMois;
+  return (Number.isInteger(v) && v >= 0) ? v : CV_LISSAGE_CREUX_DEFAUT;
+}
+
+// Fixe eVis (fin dessinée) sur chaque entrée placée : comble les creux courts
+// dans une même voie, puis les creux de la frise entière (période où rien
+// n'est en cours), en prolongeant l'entrée qui se terminait en dernier.
+function timelineLisserCreux(placed) {
+  placed.forEach(p => { p.eVis = p.e; });
+  const seuil = timelineLissageMois();
+  if (!seuil) return;
+
+  const byLane = new Map();
+  placed.forEach(p => {
+    if (!byLane.has(p.lane)) byLane.set(p.lane, []);
+    byLane.get(p.lane).push(p);
+  });
+  byLane.forEach(list => {
+    list.sort((a, b) => a.s - b.s);
+    for (let i = 0; i + 1 < list.length; i++) {
+      const gap = list[i + 1].s - list[i].e;
+      if (gap > 0 && gap <= seuil) list[i].eVis = Math.max(list[i].eVis, list[i + 1].s);
+    }
+  });
+
+  const sorted = [...placed].sort((a, b) => a.s - b.s);
+  let holder = null;
+  sorted.forEach(p => {
+    if (holder) {
+      const gap = p.s - holder.e;
+      if (gap > 0 && gap <= seuil) holder.eVis = Math.max(holder.eVis, p.s);
+    }
+    if (!holder || p.e > holder.e) holder = p;
+  });
 }
 
 // Regroupe les entrées en "clusters" d'éléments qui se chevauchent
@@ -301,7 +375,7 @@ function timelineItemRange(item, now) {
 // d'intervalles. Deux entrées qui ne se chevauchent jamais, même
 // indirectement, ne se disputent jamais les mêmes voies.
 function timelineAssignLanes(items) {
-  const now = new Date().getFullYear();
+  const now = cvNowMonthIndex();
   const withRange = items
     .map(item => {
       const [s, e] = timelineItemRange(item, now);
@@ -327,7 +401,14 @@ function timelineAssignLanes(items) {
   clusters.forEach(cluster => {
     const laneEnds = [];
     const clusterPlaced = cluster.map(entry => {
-      let lane = laneEnds.findIndex(end => entry.s >= end);
+      // Voie libérée le plus récemment ("best fit") : enchaîne les entrées
+      // consécutives sur la même ligne, ce qui permet au lissage des creux
+      // de les raccorder. Le nombre de voies reste minimal (tout choix de
+      // voie libre le garantit pour des intervalles triés par début).
+      let lane = -1;
+      laneEnds.forEach((end, i) => {
+        if (end <= entry.s && (lane === -1 || end > laneEnds[lane])) lane = i;
+      });
       if (lane === -1) {
         lane = laneEnds.length;
         laneEnds.push(entry.e);
@@ -340,7 +421,26 @@ function timelineAssignLanes(items) {
     clusterPlaced.forEach(p => result.push({ ...p, laneCount }));
   });
 
+  timelineLisserCreux(result);
   return result;
+}
+
+// Bornes d'âge : un repère à chaque anniversaire compris dans la frise.
+function timelineAgeMarkers(fromT, toT) {
+  const b = birthMonthIndex();
+  if (b == null) return [];
+  const out = [];
+  for (let age = Math.max(0, Math.ceil((fromT - b) / 12)); b + age * 12 <= toT; age++) {
+    out.push({ t: b + age * 12, age });
+  }
+  return out;
+}
+
+// Infobulle d'une barre : dates exactes (forme longue) + âge si connu.
+function timelineBarTooltip(item) {
+  const org = item.organisation || item.etablissement || '';
+  const age = formatAgeRange(item);
+  return `${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)}${age ? ', ' + age : ''})`;
 }
 
 // Rend une barre de premier niveau. Si elle a des enfants, ils sont
@@ -362,7 +462,7 @@ function renderTimelineTopBar(p, items, xFromLeft, top, height) {
   const item = p.item;
   const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
   const rawLeft = xFromLeft(p.s);
-  const rawWidth = xFromLeft(p.e) - xFromLeft(p.s);
+  const rawWidth = xFromLeft(p.eVis) - xFromLeft(p.s);
   const width = Math.max(rawWidth, TIMELINE_MIN_BAR_W);
   const left = rawLeft - (width - rawWidth) / 2;
   const org = item.organisation || item.etablissement || '';
@@ -376,19 +476,19 @@ function renderTimelineTopBar(p, items, xFromLeft, top, height) {
     inner = `
         <div class="tl-bar-header">
           ${timelineTitreButton(item)}
-          <span class="tl-bar-period">${formatPeriode(item)}</span>
+          <span class="tl-bar-period">${formatPeriode(item, true)}</span>
         </div>
         <div class="tl-bar-children">${kidsHtml}</div>`;
   } else {
     inner = `
         ${timelineTitreButton(item)}
         ${org ? `<span class="tl-bar-org">${org}</span>` : ''}
-        <span class="tl-bar-period">${formatPeriode(item)}</span>`;
+        <span class="tl-bar-period">${formatPeriode(item, true)}</span>`;
   }
 
   return `
       <div class="tl-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${height}px; --type-color:${type.couleur}; --type-bg:${bg}">
-        <div class="tl-bar-card${kids.length ? ' tl-bar-card-parent' : ''}" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">${inner}
+        <div class="tl-bar-card${kids.length ? ' tl-bar-card-parent' : ''}" title="${timelineBarTooltip(item)}">${inner}
         </div>
         ${timelineDetailPopover(item)}
       </div>`;
@@ -401,12 +501,11 @@ function renderTimelineChildBar(kp, items, xFromLeft, parentLeftPx) {
   const item = kp.item;
   const type = CV.taxonomie.types[item.type] || { label: item.type, couleur: '#999' };
   const rawLeft = xFromLeft(kp.s) - parentLeftPx;
-  const rawWidth = xFromLeft(kp.e) - xFromLeft(kp.s);
+  const rawWidth = xFromLeft(kp.eVis) - xFromLeft(kp.s);
   const width = Math.max(rawWidth, 40);
   const left = rawLeft - (width - rawWidth) / 2;
   const top = TIMELINE_CHILD_GAP + kp.lane * (TIMELINE_CHILD_ROW_H + TIMELINE_CHILD_GAP);
   const bg = tintColor(type.couleur, 0.7);
-  const org = item.organisation || item.etablissement || '';
   const grandkids = timelineChildrenOf(item.id, items);
   const expandHtml = grandkids.length ? `
         <button type="button" class="tl-bar-expand tl-bar-expand-sm" data-id="${item.id}">+${grandkids.length}</button>
@@ -414,7 +513,7 @@ function renderTimelineChildBar(kp, items, xFromLeft, parentLeftPx) {
           ${timelineChildrenTree(item.id, items)}
         </div>` : '';
   return `
-        <div class="tl-child-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_CHILD_ROW_H}px; --type-color:${type.couleur}; --type-bg:${bg}" title="${item.titre}${org ? ' — ' + org : ''} (${formatPeriode(item)})">
+        <div class="tl-child-bar${item.actuel ? ' tl-bar-actuel' : ''}" style="left:${left}px; width:${width}px; top:${top}px; height:${TIMELINE_CHILD_ROW_H}px; --type-color:${type.couleur}; --type-bg:${bg}" title="${timelineBarTooltip(item)}">
           ${timelineTitreButton(item, 'tl-child-bar-titre')}
           ${expandHtml}
           ${timelineDetailPopover(item)}
@@ -428,15 +527,19 @@ function renderTimelineGantt(container, items) {
     return;
   }
   const { min, max } = timelineBounds(topLevel);
-  const now = new Date().getFullYear();
-  const yearSpan = Math.max(max - min, 1);
+  const now = cvNowMonthIndex();
+  const minYear = Math.floor(min / 12);
+  const origin = minYear * 12; // la frise commence toujours sur un début d'année
+  const yearSpan = Math.max((max - origin) / 12, 1);
   // Étire la frise pour remplir la largeur disponible plutôt que de laisser
   // du vide — ne descend jamais sous le plancher (lisibilité), mais grandit
   // librement sur un grand écran.
   const available = container.clientWidth || 0;
   const pxPerYear = Math.max(TIMELINE_PX_PER_YEAR_MIN, (available - TIMELINE_MIN_BAR_W) / yearSpan);
-  const xFromLeft = (year) => (year - min) * pxPerYear;
+  const xFromLeft = (t) => (t - origin) / 12 * pxPerYear;
   const totalWidth = Math.max(xFromLeft(max) + TIMELINE_MIN_BAR_W / 2 + 40, available);
+  const ages = timelineAgeMarkers(origin, max);
+  const axisH = TIMELINE_AXIS_H + (ages.length ? TIMELINE_AGE_H : 0);
 
   const placed = timelineAssignLanes(topLevel);
   const maxLaneIndex = placed.reduce((m, p) => Math.max(m, p.lane), 0);
@@ -454,14 +557,27 @@ function renderTimelineGantt(container, items) {
     laneTop[l] = cursor;
     cursor += laneHeights[l] + TIMELINE_LANE_GAP;
   }
-  const totalHeight = TIMELINE_AXIS_H + cursor;
+  const totalHeight = axisH + cursor;
 
   const years = [];
-  for (let y = min; y <= max; y++) years.push(y);
-  const axisHtml = years.map(y => `
-    <div class="tl-axis-col${y === now ? ' tl-axis-col-now' : ''}" style="left:${xFromLeft(y)}px">
-      <span class="tl-axis-year">${y === now ? 'auj.' : y}</span>
+  for (let y = minYear; y * 12 <= max; y++) years.push(y);
+  // "auj." a son propre repère au mois près ; on masque le libellé d'une
+  // année trop proche pour ne pas qu'ils se chevauchent.
+  const yearsHtml = years.map(y => `
+    <div class="tl-axis-col" style="left:${xFromLeft(y * 12)}px">
+      ${Math.abs(now - y * 12) < 3 ? '' : `<span class="tl-axis-year">${y}</span>`}
       <span class="tl-axis-line"></span>
+    </div>`).join('');
+  const nowHtml = `
+    <div class="tl-axis-col tl-axis-col-now" style="left:${xFromLeft(now)}px">
+      <span class="tl-axis-year">auj.</span>
+      <span class="tl-axis-line"></span>
+    </div>`;
+  // Les âges ronds (multiples de 5) tracent une ligne pointillée sur toute la
+  // hauteur ; les autres gardent un simple repère dans la bande des âges.
+  const agesHtml = ages.map(a => `
+    <div class="tl-age-mark${a.age % 5 === 0 ? ' tl-age-mark-rond' : ''}" style="left:${xFromLeft(a.t)}px; top:${TIMELINE_AXIS_H}px">
+      <span class="tl-age-label">${a.age} ans</span>
     </div>`).join('');
 
   const barsHtml = placed.map(p => renderTimelineTopBar(p, items, xFromLeft, laneTop[p.lane], laneHeights[p.lane])).join('');
@@ -469,8 +585,8 @@ function renderTimelineGantt(container, items) {
   container.innerHTML = `
     <div class="tl-gantt-wrap">
       <div class="tl-gantt" style="width:${totalWidth}px; height:${totalHeight}px">
-        <div class="tl-gantt-axis">${axisHtml}</div>
-        <div class="tl-gantt-bars" style="top:${TIMELINE_AXIS_H}px">${barsHtml}</div>
+        <div class="tl-gantt-axis">${yearsHtml}${agesHtml}${nowHtml}</div>
+        <div class="tl-gantt-bars" style="top:${axisH}px">${barsHtml}</div>
       </div>
     </div>`;
 

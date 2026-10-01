@@ -63,7 +63,7 @@ function normalizeState(src) {
   src = src || {};
   return {
     theme: src.theme || { preset: 'ambre', overrides: {} },
-    display: { masquerTypesLieu: (src.display && src.display.masquerTypesLieu) || [] },
+    display: { ...(src.display || {}), masquerTypesLieu: (src.display && src.display.masquerTypesLieu) || [] },
     profil: src.profil || { nom: '', titre: '', sousTitre: '', photo: '', ville: '', pays: '', bio: '' },
     contact: src.contact || { mode: 'mailto', email: '', formAction: '' },
     taxonomie: {
@@ -225,10 +225,20 @@ function buildThemeSection() {
         <p class="hint">Utile par exemple si toutes vos expériences sont dans la même ville : décochez "ville" pour ne pas la répéter partout, en gardant "institution" affiché.</p>
         ${lieuTypes.map(t => `
           <label class="field-checkbox"><input type="checkbox" class="display-lieu-type" data-type="${escapeHtml(t)}" ${state.display.masquerTypesLieu.includes(t) ? '' : 'checked'}><span>${escapeHtml(t)}</span></label>`).join('')}
-      </div>` : ''}`;
+      </div>` : ''}
+    <label class="field">
+      <span>Lisser les creux de la frise (mois)</span>
+      <input type="number" id="display-lissage" min="0" max="24" value="${state.display.lisserCreuxMois ?? CV_LISSAGE_CREUX_DEFAUT}">
+    </label>
+    <p class="hint">Une interruption plus courte que ce nombre de mois entre deux engagements n'est pas dessinée comme un trou sur la frise chronologique — les dates affichées restent exactes. 0 pour tout montrer tel quel.</p>`;
 
   document.getElementById('theme-preset').addEventListener('change', (e) => {
     state.theme.preset = e.target.value;
+    updateOutput();
+  });
+  document.getElementById('display-lissage').addEventListener('input', (e) => {
+    if (e.target.value === '') delete state.display.lisserCreuxMois;
+    else state.display.lisserCreuxMois = Number(e.target.value);
     updateOutput();
   });
   c.querySelectorAll('.display-lieu-type').forEach(cb => {
@@ -251,6 +261,31 @@ function textField(id, label, value, placeholder = '') {
 
 function textareaField(id, label, value, placeholder = '') {
   return `<label class="field"><span>${label}</span><textarea id="${id}" rows="3" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value)}</textarea></label>`;
+}
+
+// Date "année + mois optionnel" → 2021 ou "2021-03" (voir composeCvDate).
+function dateField(id, label, value, disabled) {
+  const d = parseCvDate(value) || { annee: '', mois: null };
+  const dis = disabled ? 'disabled' : '';
+  return `<div class="field"><span>${label}</span><div class="date-field">
+    <select id="${id}-mois" ${dis} aria-label="${label} — mois">
+      <option value="">— mois —</option>
+      ${CV_MOIS_COURTS.map((m, i) => `<option value="${i + 1}" ${d.mois === i + 1 ? 'selected' : ''}>${m}</option>`).join('')}
+    </select>
+    <input type="number" id="${id}" value="${d.annee}" ${dis} placeholder="année" aria-label="${label} — année">
+  </div></div>`;
+}
+
+function bindDateField(id, cb) {
+  const y = document.getElementById(id);
+  const m = document.getElementById(`${id}-mois`);
+  if (!y || !m) return;
+  const fire = () => {
+    cb(composeCvDate(y.value ? Number(y.value) : null, m.value ? Number(m.value) : null));
+    updateOutput();
+  };
+  y.addEventListener('input', fire);
+  m.addEventListener('change', fire);
 }
 
 const PAYS_LIST = [
@@ -302,6 +337,9 @@ function buildProfilSection() {
     </label>
     <div id="p-pays-autre-wrap">${(p.pays && !paysConnu) ? textField('p-pays-autre', 'Précisez le pays', p.pays) : ''}</div>
 
+    ${dateField('p-naissance', 'Naissance (optionnel)', p.naissance)}
+    <p class="hint">Sert uniquement à afficher des repères d'âge sur la frise chronologique. Année seule ou année + mois, jamais le jour. Laissez vide pour n'afficher aucun âge.</p>
+
     ${textareaField('p-bio', 'Bio courte', p.bio)}`;
 
   const bind = (id, key) => document.getElementById(id).addEventListener('input', (e) => {
@@ -313,6 +351,10 @@ function buildProfilSection() {
   bind('p-soustitre', 'sousTitre');
   bind('p-ville', 'ville');
   bind('p-bio', 'bio');
+  bindDateField('p-naissance', v => {
+    if (v == null) delete state.profil.naissance;
+    else state.profil.naissance = v;
+  });
 
   const preview = document.getElementById('p-photo-preview');
   const setPhoto = (value) => {
@@ -664,8 +706,8 @@ function renderEntryCards(collection) {
         <button type="button" class="btn-add" id="e-${collection}-${i}-lieu-add">+ Ajouter un lieu</button>
       </div>
       <div class="field-row">
-        <label class="field"><span>Début</span><input type="number" id="e-${collection}-${i}-debut" value="${item.debut ?? ''}"></label>
-        <label class="field"><span>Fin</span><input type="number" id="e-${collection}-${i}-fin" value="${item.fin ?? ''}" ${item.actuel ? 'disabled' : ''}></label>
+        ${dateField(`e-${collection}-${i}-debut`, 'Début', item.debut)}
+        ${dateField(`e-${collection}-${i}-fin`, 'Fin', item.fin, item.actuel)}
         <label class="field field-checkbox"><input type="checkbox" id="e-${collection}-${i}-actuel" ${item.actuel ? 'checked' : ''}><span>En cours</span></label>
       </div>
       <label class="field">
@@ -708,8 +750,8 @@ function renderEntryCards(collection) {
     bindText('titre', v => { item.titre = v; assignAutoId(item); refreshEntryTitleDom(collection, i); });
     bindText('org', v => { item.organisation = v; });
     if (collection === 'formations') bindText('etab', v => { item.etablissement = v; });
-    bindText('debut', v => { item.debut = v ? Number(v) : null; });
-    bindText('fin', v => { item.fin = v ? Number(v) : null; });
+    bindDateField(`e-${collection}-${i}-debut`, v => { item.debut = v; });
+    bindDateField(`e-${collection}-${i}-fin`, v => { item.fin = v; });
     bindText('desc', v => { item.description = v; });
     bindText('points', v => { item.points_cles = v.split('\n').map(s => s.trim()).filter(Boolean); });
     if (collection === 'projets') bindText('tech', v => { item.technologies = v.split(',').map(s => s.trim()).filter(Boolean); });
@@ -717,8 +759,10 @@ function renderEntryCards(collection) {
     const actuelBox = document.getElementById(`e-${collection}-${i}-actuel`);
     if (actuelBox) actuelBox.addEventListener('change', (e) => {
       item.actuel = e.target.checked;
-      const finInput = document.getElementById(`e-${collection}-${i}-fin`);
-      if (finInput) finInput.disabled = item.actuel;
+      ['fin', 'fin-mois'].forEach(suffix => {
+        const node = document.getElementById(`e-${collection}-${i}-${suffix}`);
+        if (node) node.disabled = item.actuel;
+      });
       if (item.actuel) item.fin = null;
       updateOutput();
     });

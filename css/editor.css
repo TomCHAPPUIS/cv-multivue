@@ -234,3 +234,7 @@
   color: var(--text);
   resize: vertical;
 }
+
+.date-field { display: flex; gap: 0.35rem; }
+.date-field select { flex: 0 0 auto; width: auto; }
+.date-field input[type="number"] { flex: 1; min-width: 4.5rem; }

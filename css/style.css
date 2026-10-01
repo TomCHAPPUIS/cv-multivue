@@ -350,6 +350,48 @@ body {
   opacity: 0.6;
   width: 2px;
 }
+/* Bornes d'âge (CV.profil.naissance) : bande sous les années */
+.tl-age-mark {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+}
+.tl-age-mark::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  height: 5px;
+  left: 0;
+  border-left: 1px solid var(--accent);
+  opacity: 0.6;
+}
+.tl-age-label {
+  position: absolute;
+  top: 1px;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--bg);
+  font-size: 0.62rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.tl-age-mark-rond .tl-age-label { font-weight: 700; }
+.tl-age-mark-rond::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  left: 0;
+  border-left: 1px dashed var(--accent);
+  opacity: 0.45;
+}
+.timeline-age {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--accent);
+}
 .tl-gantt-bars {
   position: absolute;
   left: 0;

@@ -4,6 +4,45 @@
 // une entrée sans id, etc. Partagé entre app.js (vérifie CV au chargement du
 // site) et editor.js (vérifie l'état en cours d'édition).
 
+// ── Dates ────────────────────────────────────────────────────────────────────
+// Une date du CV est une année seule (2021) ou "AAAA-MM" quand le mois est
+// connu ("2021-03"). Les deux formes cohabitent librement.
+
+// Valeur par défaut de CV.display.lisserCreuxMois (partagée site + éditeur).
+const CV_LISSAGE_CREUX_DEFAUT = 3;
+
+const CV_MOIS_COURTS =['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+function parseCvDate(v) {
+  if (typeof v === 'number' && Number.isInteger(v)) return { annee: v, mois: null };
+  if (typeof v !== 'string') return null;
+  let m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(v);
+  if (m) return { annee: Number(m[1]), mois: Number(m[2]) };
+  m = /^(\d{4})$/.exec(v);
+  return m ? { annee: Number(m[1]), mois: null } : null;
+}
+
+// Position en mois entiers (comparaisons exactes, pas de flottants). Un mois
+// de fin est inclus : "→ 2021-06" s'arrête là où "2021-07 →" commence, sans
+// creux entre les deux. Une année seule garde le sens historique du projet
+// (début de cette année), pour ne rien décaler sur les données sans mois.
+function cvMonthIndex(v, edge) {
+  const d = parseCvDate(v);
+  if (!d) return null;
+  if (d.mois == null) return d.annee * 12;
+  return d.annee * 12 + (edge === 'end' ? d.mois : d.mois - 1);
+}
+
+function cvNowMonthIndex() {
+  const now = new Date();
+  return now.getFullYear() * 12 + now.getMonth() + 1;
+}
+
+function composeCvDate(annee, mois) {
+  if (!annee) return null;
+  return mois ? `${annee}-${String(mois).padStart(2, '0')}` : Number(annee);
+}
+
 function validateCV(cv) {
   cv = cv || (typeof CV !== 'undefined' ? CV : undefined);
   const errors = [];
@@ -11,6 +50,13 @@ function validateCV(cv) {
     return ["L'objet CV est introuvable — vérifiez que les données sont chargées avant ce script (js/data.js dans index.html, ou sessionStorage dans preview.html)."];
   }
   if (!cv.profil || !cv.profil.nom) errors.push('CV.profil.nom est requis.');
+  if (cv.profil && cv.profil.naissance != null && cv.profil.naissance !== '' && !parseCvDate(cv.profil.naissance)) {
+    errors.push(`CV.profil.naissance "${cv.profil.naissance}" invalide (attendu : 1995 ou "1995-04").`);
+  }
+  if (cv.display && cv.display.lisserCreuxMois != null
+      && !(Number.isInteger(cv.display.lisserCreuxMois) && cv.display.lisserCreuxMois >= 0)) {
+    errors.push('CV.display.lisserCreuxMois doit être un nombre entier de mois (0 pour désactiver).');
+  }
 
   if (!cv.taxonomie) {
     errors.push('CV.taxonomie est manquant.');
@@ -76,6 +122,14 @@ function validateCV(cv) {
 
       if (!item.titre) errors.push(`CV.${name} ${label} : titre manquant.`);
       if (item.debut == null) errors.push(`CV.${name} ${label} : debut manquant.`);
+      else if (!parseCvDate(item.debut)) errors.push(`CV.${name} ${label} : debut "${item.debut}" invalide (attendu : 2021 ou "2021-03").`);
+      if (item.fin != null && !parseCvDate(item.fin)) {
+        errors.push(`CV.${name} ${label} : fin "${item.fin}" invalide (attendu : 2021 ou "2021-03").`);
+      } else if (item.fin != null && parseCvDate(item.debut)) {
+        const d = parseCvDate(item.debut), f = parseCvDate(item.fin);
+        const avant = f.annee < d.annee || (f.annee === d.annee && f.mois != null && d.mois != null && f.mois < d.mois);
+        if (avant) errors.push(`CV.${name} ${label} : fin antérieure au début.`);
+      }
 
       if (item.type && cv.taxonomie.types && !cv.taxonomie.types[item.type]) {
         errors.push(`CV.${name} ${label} : type "${item.type}" absent de CV.taxonomie.types.`);

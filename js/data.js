@@ -21,7 +21,11 @@ const CV = {
   // sans avoir à toucher chaque entrée. Les valeurs possibles dépendent des
   // "type" que vous utilisez vous-même dans lieu[] plus bas (texte libre).
   display: {
-    masquerTypesLieu: []
+    masquerTypesLieu: [],
+    // Sur la frise, une interruption plus courte que ce nombre de mois entre
+    // deux engagements n'est pas dessinée comme un trou (les dates affichées
+    // restent exactes). 0 pour tout montrer tel quel. Défaut : 3.
+    lisserCreuxMois: 3
   },
 
   // Identité publique — ce que vous accepteriez de voir sur un réseau
@@ -34,6 +38,10 @@ const CV = {
     photo: "", // URL, chemin relatif, ou data URI (intégrée via editor.html) — laisser vide pour ne rien afficher
     ville: "Votre ville",
     pays: "Suisse",
+    // Optionnel : affiche des repères d'âge sur la frise chronologique.
+    // Année seule (1995) ou année + mois ("1995-04"), jamais le jour.
+    // Supprimez la ligne pour n'afficher aucun âge.
+    naissance: "1995-04",
     bio: "Une bio courte (2-3 phrases). Non affichée par les vues actuelles, mais disponible si vous étendez le template."
   },
 
@@ -117,7 +125,8 @@ const CV = {
   },
 
   // Vos expériences professionnelles/associatives.
-  // Champs : id (unique), titre, organisation, debut/fin (années,
+  // Champs : id (unique), titre, organisation, debut/fin (année seule, ex.
+  // 2021, ou année + mois, ex. "2021-03" — les deux se mélangent librement ;
   // fin=null si actuel), actuel (bool), type (clé de taxonomie.types),
   // milieux[]/competences[] (clés de taxonomie), description, points_cles[].
   // lieu (optionnel) : tableau de { type, valeur, glossaire? } — le "type"
@@ -135,7 +144,7 @@ const CV = {
         { type: "ville", valeur: "Ville", glossaire: "exemple-lieu" },
         { type: "institution", valeur: "Nom de l'institution" }
       ],
-      debut: 2022,
+      debut: "2022-09",
       fin: null,
       actuel: true,
       type: "emploi",
@@ -153,8 +162,8 @@ const CV = {
       titre: "Intitulé du poste précédent",
       organisation: "Nom de l'organisation",
       lieu: [{ type: "ville", valeur: "Ville" }],
-      debut: 2019,
-      fin: 2022,
+      debut: "2019-02",
+      fin: "2022-06",
       actuel: false,
       type: "associatif",
       milieux: ["spectacle-vivant-musique"],
@@ -171,8 +180,8 @@ const CV = {
       titre: "Exemple de sous-engagement",
       organisation: "Nom de l'organisation",
       lieu: [{ type: "ville", valeur: "Ville" }],
-      debut: 2023,
-      fin: 2023,
+      debut: "2023-03",
+      fin: "2023-08",
       actuel: false,
       type: "emploi",
       milieux: ["numerique"],

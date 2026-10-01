@@ -15,8 +15,9 @@ d'exemple fictives)
 
 1. **Chronologique** — frise proportionnelle (position/durée proportionnelles
    au temps) : les périodes qui se chevauchent s'affichent côte à côte au
-   lieu d'être noyées dans une liste. Repli automatique sur une liste
-   simple en dessous de 720px de large.
+   lieu d'être noyées dans une liste. Précision au mois quand vous la
+   renseignez, et repères d'âge optionnels sous l'axe des années. Repli
+   automatique sur une liste simple en dessous de 720px de large.
 2. **Par milieux** — vos expériences regroupées par secteur/contexte
    professionnel (ex : numérique, culture, santé...), avec filtre. C'est ce
    que fait *l'organisation*, pas ce que vous y avez fait.
@@ -88,7 +89,10 @@ couches :
   `masquerTypesLieu: []`, une liste de `type` de lieu (voir plus bas) à
   masquer partout sur le site — utile si, par exemple, toutes vos
   expériences sont dans la même ville et que la répéter partout n'apporte
-  rien.
+  rien. `lisserCreuxMois` (défaut `3`) : sur la frise, une interruption plus
+  courte que ce nombre de mois entre deux engagements n'est pas dessinée
+  comme un trou — les dates affichées restent exactes, seul le dessin des
+  barres est raccordé. `0` pour tout montrer tel quel.
 - **`CV.glossaire`** (optionnel) — petites définitions pour les termes qui
   le méritent (`{ id: { terme, definition } }`). N'apparaît jamais dans la
   navigation du site : une valeur qui référence une entrée du glossaire
@@ -98,7 +102,9 @@ couches :
   pays, bio), affichée dans la barre latérale. `photo` accepte une URL,
   un chemin relatif, ou une image intégrée directement (data URI générée
   par `editor.html`). Volontairement **aucun téléphone/email ici** — voir
-  `CV.contact` ci-dessous.
+  `CV.contact` ci-dessous. `naissance` (optionnel, `1995` ou `"1995-04"`,
+  jamais le jour) affiche des repères d'âge sous l'axe de la frise et
+  l'âge sur chaque entrée de la liste ; absent, aucun âge n'est affiché.
 - **`CV.contact`** — comment on vous contacte, sans exposer votre adresse
   en clair dans le code de la page (évite le moissonnage automatique une
   fois le site en ligne). Deux modes au choix :
@@ -150,6 +156,10 @@ couches :
   compétences). `formations` ajoute `etablissement` ; `projets` ajoute
   `technologies[]` et un flag `placeholder` (affiche un badge "À
   compléter", à retirer une fois l'entrée finalisée).
+  - `debut`/`fin` : une année seule (`2021`) ou année + mois (`"2021-03"`),
+    librement mélangés. Le mois de fin est inclus : `fin: "2021-06"` puis
+    `debut: "2021-07"` se suivent sans creux. `fin: null` (ou `actuel:
+    true`) pour un engagement en cours.
   - `lieu` (optionnel) : tableau de `{ type, valeur, glossaire? }` plutôt
     qu'un simple texte — vous choisissez vos propres catégories de lieu
     (`"ville"`, `"institution"`, `"antenne"`, ou autre chose de pertinent
