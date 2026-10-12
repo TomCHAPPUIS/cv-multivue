@@ -227,6 +227,11 @@ body {
   transition: all 0.15s;
 }
 .filter-btn:hover { color: var(--sidebar-text); background: rgba(255,255,255,0.05); }
+.filter-count {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--sidebar-muted);
+}
 .filter-btn.active {
   color: #fff;
   background: rgba(255,255,255,0.08);
