@@ -11,6 +11,23 @@
 // Valeur par défaut de CV.display.lisserCreuxMois (partagée site + éditeur).
 const CV_LISSAGE_CREUX_DEFAUT = 3;
 
+// Réseaux proposés pour CV.profil.liens (partagé site + éditeur). Un type
+// absent de cette table reste accepté : il s'affiche avec son libelle, ou à
+// défaut le nom de domaine de l'URL.
+const CV_LIENS_TYPES = {
+  linkedin: 'LinkedIn', github: 'GitHub', gitlab: 'GitLab', mastodon: 'Mastodon',
+  bluesky: 'Bluesky', x: 'X', instagram: 'Instagram', behance: 'Behance',
+  dribbble: 'Dribbble', orcid: 'ORCID', site: 'Site web', autre: 'Autre'
+};
+
+// Texte affiché pour un lien : libelle s'il est donné, sinon le nom du réseau,
+// sinon le domaine de l'URL (type "autre" ou inconnu).
+function cvLienLibelle(l) {
+  if (l.libelle) return l.libelle;
+  if (l.type && l.type !== 'autre' && CV_LIENS_TYPES[l.type]) return CV_LIENS_TYPES[l.type];
+  try { return new URL(l.url).hostname.replace(/^www\./, ''); } catch (e) { return l.url; }
+}
+
 const CV_MOIS_COURTS =['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
 function parseCvDate(v) {
@@ -56,6 +73,23 @@ function validateCV(cv) {
   if (cv.display && cv.display.lisserCreuxMois != null
       && !(Number.isInteger(cv.display.lisserCreuxMois) && cv.display.lisserCreuxMois >= 0)) {
     errors.push('CV.display.lisserCreuxMois doit être un nombre entier de mois (0 pour désactiver).');
+  }
+  if (cv.display && cv.display.masquerImpression != null && typeof cv.display.masquerImpression !== 'boolean') {
+    errors.push('CV.display.masquerImpression doit valoir true ou false.');
+  }
+  // Liens injectés tels quels dans un href : seuls http(s) sont acceptés, ce
+  // qui écarte au passage tout "javascript:" glissé dans les données.
+  if (cv.profil && cv.profil.liens != null) {
+    if (!Array.isArray(cv.profil.liens)) {
+      errors.push('CV.profil.liens doit être un tableau (ex. [{ type: "linkedin", url: "https://…" }]).');
+    } else {
+      cv.profil.liens.forEach((l, i) => {
+        if (!l || !l.url) errors.push(`CV.profil.liens[${i}] : url manquante.`);
+        else if (!/^https?:\/\/\S+$/i.test(l.url)) {
+          errors.push(`CV.profil.liens[${i}] : url "${l.url}" invalide (doit commencer par https://).`);
+        }
+      });
+    }
   }
 
   if (!cv.taxonomie) {

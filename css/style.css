@@ -115,6 +115,17 @@ body {
 .contact-info a { text-decoration: none; color: var(--sidebar-text); transition: color 0.15s; }
 .contact-info a:hover { color: var(--accent); }
 
+.profil-liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  font-size: 0.77rem;
+}
+.profil-liens:empty { display: none; }
+.profil-liens a { text-decoration: none; color: var(--sidebar-text); transition: color 0.15s; }
+.profil-liens a:hover { color: var(--accent); }
+.lien-fleche { margin-left: 0.2rem; font-size: 0.7em; color: var(--sidebar-muted); }
+
 .contact-warning {
   font-size: 0.72rem;
   color: var(--accent);
@@ -912,6 +923,11 @@ body {
   .contact-info,
   .sidebar-footer { color: #333; }
   .contact-info a { color: #111; }
+  /* Sur papier un lien ne se clique pas : on imprime l'adresse à côté. */
+  .profil-liens { flex-direction: column; margin-top: 0.4rem; }
+  .profil-liens a { color: #111; }
+  .profil-liens a::after { content: " — " attr(href); color: #555; }
+  .lien-fleche { display: none; }
   .view-nav, #sidebar-filters { display: none; }
   .sidebar-footer {
     border-top: none;

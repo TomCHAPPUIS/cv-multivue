@@ -31,7 +31,7 @@ d'exemple fictives)
 Un bouton **Imprimer / PDF** dans la barre latérale ouvre l'aperçu
 d'impression du navigateur (Ctrl/Cmd+P fonctionne aussi) — la frise bascule
 automatiquement sur sa version liste pour l'impression, plus adaptée à la
-pagination papier.
+pagination papier. Le bouton peut être masqué (`CV.display.masquerImpression`).
 
 Les trois vues sont générées à partir des **mêmes données** — vous ne
 saisissez chaque expérience qu'une seule fois, en la rattachant aux
@@ -93,6 +93,9 @@ couches :
   courte que ce nombre de mois entre deux engagements n'est pas dessinée
   comme un trou — les dates affichées restent exactes, seul le dessin des
   barres est raccordé. `0` pour tout montrer tel quel.
+  `masquerImpression` (défaut `false`) : `true` retire le bouton
+  **Imprimer / PDF** de la barre latérale — l'impression du navigateur
+  (Ctrl/Cmd+P) reste possible, avec la même mise en page.
 - **`CV.glossaire`** (optionnel) — petites définitions pour les termes qui
   le méritent (`{ id: { terme, definition } }`). N'apparaît jamais dans la
   navigation du site : une valeur qui référence une entrée du glossaire
@@ -105,6 +108,13 @@ couches :
   `CV.contact` ci-dessous. `naissance` (optionnel, `1995` ou `"1995-04"`,
   jamais le jour) affiche des repères d'âge sous l'axe de la frise et
   l'âge sur chaque entrée de la liste ; absent, aucun âge n'est affiché.
+  `liens` (optionnel) : vos profils publics, affichés sous le contact et
+  ouverts dans un nouvel onglet — `[{ type, url, libelle }]`. `type` parmi
+  `linkedin`, `github`, `gitlab`, `mastodon`, `bluesky`, `x`, `instagram`,
+  `behance`, `dribbble`, `orcid`, `site`, `autre` ; `url` en `https://`
+  obligatoire (validée au chargement) ; `libelle` facultatif remplace le
+  nom du réseau (à défaut, pour `autre`, le domaine de l'adresse est
+  affiché). À l'impression, l'adresse complète est imprimée à côté.
 - **`CV.contact`** — comment on vous contacte, sans exposer votre adresse
   en clair dans le code de la page (évite le moissonnage automatique une
   fois le site en ligne). Deux modes au choix :

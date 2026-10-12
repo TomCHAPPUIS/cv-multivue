@@ -54,8 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+    // CV.display.masquerImpression : bouton retiré, l'impression du navigateur
+    // (Ctrl/Cmd+P) garde sa mise en page dédiée.
     const printBtn = document.getElementById('btn-print');
-    if (printBtn) printBtn.addEventListener('click', () => window.print());
+    if (printBtn) {
+      if (CV.display && CV.display.masquerImpression) printBtn.remove();
+      else printBtn.addEventListener('click', () => window.print());
+    }
   } catch (e) {
     renderValidationErrors([`Erreur inattendue au chargement : ${e.message}`]);
   }
@@ -895,6 +900,18 @@ function renderProfil() {
     ${lieu ? `<p class="lieu">${lieu}</p>` : ''}`;
 
   renderContact();
+  renderLiens();
+}
+
+// ── Liens (réseaux, site…) ────────────────────────────────────────────────────
+// CV.profil.liens : profils publics, ouverts dans un nouvel onglet. Les URL
+// sont garanties en http(s) par validateCV().
+
+function renderLiens() {
+  const el = document.getElementById('profil-liens');
+  if (!el) return;
+  el.innerHTML = (CV.profil.liens || []).map(l => `
+    <a href="${l.url.replace(/"/g, '%22')}" target="_blank" rel="me noopener noreferrer">${cvLienLibelle(l)}<span class="lien-fleche" aria-hidden="true">↗</span></a>`).join('');
 }
 
 // ── Contact ───────────────────────────────────────────────────────────────────
