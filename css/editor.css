@@ -151,7 +151,8 @@
   align-items: center;
   margin-bottom: 0.4rem;
 }
-.taxo-row input[type="text"] {
+.taxo-row input[type="text"],
+.taxo-row input[type="url"] {
   flex: 1;
   font-size: 0.82rem;
   padding: 0.4rem 0.55rem;
@@ -161,6 +162,7 @@
   color: var(--text);
   min-width: 0;
 }
+.taxo-row input[type="url"] { flex: 2; }
 .taxo-row input[type="color"] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 5px; }
 .taxo-row select {
   flex-shrink: 0;

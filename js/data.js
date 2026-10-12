@@ -25,7 +25,10 @@ const CV = {
     // Sur la frise, une interruption plus courte que ce nombre de mois entre
     // deux engagements n'est pas dessinée comme un trou (les dates affichées
     // restent exactes). 0 pour tout montrer tel quel. Défaut : 3.
-    lisserCreuxMois: 3
+    lisserCreuxMois: 3,
+    // true pour retirer le bouton "Imprimer / PDF" de la barre latérale
+    // (l'impression du navigateur, Ctrl/Cmd+P, reste possible). Défaut : false.
+    masquerImpression: false
   },
 
   // Identité publique — ce que vous accepteriez de voir sur un réseau
@@ -42,7 +45,17 @@ const CV = {
     // Année seule (1995) ou année + mois ("1995-04"), jamais le jour.
     // Supprimez la ligne pour n'afficher aucun âge.
     naissance: "1995-04",
-    bio: "Une bio courte (2-3 phrases). Non affichée par les vues actuelles, mais disponible si vous étendez le template."
+    bio: "Une bio courte (2-3 phrases). Non affichée par les vues actuelles, mais disponible si vous étendez le template.",
+    // Optionnel : liens vers vos profils publics, affichés sous le contact.
+    // type : linkedin | github | gitlab | mastodon | bluesky | x | instagram |
+    // behance | dribbble | orcid | site | autre. url : https:// obligatoire.
+    // libelle (facultatif) remplace le nom du réseau affiché — utile pour
+    // "site" ou "autre". Supprimez la liste pour n'afficher aucun lien.
+    liens: [
+      { type: "linkedin", url: "https://www.linkedin.com/in/exemple" },
+      { type: "github", url: "https://github.com/exemple" },
+      { type: "site", url: "https://exemple.com", libelle: "Portfolio" }
+    ]
   },
 
   // Contact — jamais de téléphone/email affiché en clair dans le code de

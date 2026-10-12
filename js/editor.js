@@ -230,10 +230,17 @@ function buildThemeSection() {
       <span>Lisser les creux de la frise (mois)</span>
       <input type="number" id="display-lissage" min="0" max="24" value="${state.display.lisserCreuxMois ?? CV_LISSAGE_CREUX_DEFAUT}">
     </label>
-    <p class="hint">Une interruption plus courte que ce nombre de mois entre deux engagements n'est pas dessinée comme un trou sur la frise chronologique — les dates affichées restent exactes. 0 pour tout montrer tel quel.</p>`;
+    <p class="hint">Une interruption plus courte que ce nombre de mois entre deux engagements n'est pas dessinée comme un trou sur la frise chronologique — les dates affichées restent exactes. 0 pour tout montrer tel quel.</p>
+    <label class="field-checkbox"><input type="checkbox" id="display-impression" ${state.display.masquerImpression ? '' : 'checked'}><span>Afficher le bouton « Imprimer / PDF »</span></label>
+    <p class="hint">Décoché, le bouton disparaît de la barre latérale ; l'impression du navigateur (Ctrl/Cmd+P) reste possible avec la même mise en page.</p>`;
 
   document.getElementById('theme-preset').addEventListener('change', (e) => {
     state.theme.preset = e.target.value;
+    updateOutput();
+  });
+  document.getElementById('display-impression').addEventListener('change', (e) => {
+    if (e.target.checked) delete state.display.masquerImpression;
+    else state.display.masquerImpression = true;
     updateOutput();
   });
   document.getElementById('display-lissage').addEventListener('input', (e) => {
@@ -340,7 +347,22 @@ function buildProfilSection() {
     ${dateField('p-naissance', 'Naissance (optionnel)', p.naissance)}
     <p class="hint">Sert uniquement à afficher des repères d'âge sur la frise chronologique. Année seule ou année + mois, jamais le jour. Laissez vide pour n'afficher aucun âge.</p>
 
-    ${textareaField('p-bio', 'Bio courte', p.bio)}`;
+    ${textareaField('p-bio', 'Bio courte', p.bio)}
+
+    <div class="field">
+      <span>Liens (réseaux, site…)</span>
+      <p class="hint">Affichés sous le contact et ouverts dans un nouvel onglet. Libellé facultatif : à défaut, le nom du réseau (ou le domaine de l'adresse pour « Autre »).</p>
+      <div id="p-liens-list"></div>
+      <button type="button" class="btn-add" id="p-liens-add">+ Ajouter un lien</button>
+    </div>`;
+
+  renderLiensList();
+  document.getElementById('p-liens-add').addEventListener('click', () => {
+    if (!state.profil.liens) state.profil.liens = [];
+    state.profil.liens.push({ type: 'linkedin', url: '' });
+    renderLiensList();
+    updateOutput();
+  });
 
   const bind = (id, key) => document.getElementById(id).addEventListener('input', (e) => {
     state.profil[key] = e.target.value;
@@ -391,6 +413,41 @@ function buildProfilSection() {
   if (autreInput) autreInput.addEventListener('input', (e) => {
     state.profil.pays = e.target.value;
     updateOutput();
+  });
+}
+
+function renderLiensList() {
+  const el = document.getElementById('p-liens-list');
+  const liens = state.profil.liens || [];
+  el.innerHTML = liens.map((l, i) => `
+    <div class="taxo-row">
+      <select data-i="${i}" data-f="type" aria-label="Réseau">
+        ${Object.entries(CV_LIENS_TYPES).map(([id, label]) => `<option value="${id}" ${l.type === id ? 'selected' : ''}>${label}</option>`).join('')}
+        ${l.type && !CV_LIENS_TYPES[l.type] ? `<option value="${escapeHtml(l.type)}" selected>${escapeHtml(l.type)}</option>` : ''}
+      </select>
+      <input type="url" data-i="${i}" data-f="url" value="${escapeHtml(l.url)}" placeholder="https://…">
+      <input type="text" data-i="${i}" data-f="libelle" value="${escapeHtml(l.libelle)}" placeholder="Libellé (facultatif)">
+      <button type="button" class="btn-remove" data-i="${i}">✕</button>
+    </div>`).join('') || '<p class="hint">Aucun lien.</p>';
+
+  el.querySelectorAll('input, select').forEach(input => {
+    input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', (e) => {
+      const lien = state.profil.liens[Number(e.target.dataset.i)];
+      const f = e.target.dataset.f;
+      // Libellé vidé = retour au nom du réseau : on retire la clé plutôt que
+      // de laisser libelle: "" dans le data.js généré.
+      if (f === 'libelle' && !e.target.value) delete lien.libelle;
+      else lien[f] = e.target.value;
+      updateOutput();
+    });
+  });
+  el.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      state.profil.liens.splice(Number(e.target.dataset.i), 1);
+      if (!state.profil.liens.length) delete state.profil.liens;
+      renderLiensList();
+      updateOutput();
+    });
   });
 }
 
