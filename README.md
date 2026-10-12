@@ -33,6 +33,11 @@ d'impression du navigateur (Ctrl/Cmd+P fonctionne aussi) — la frise bascule
 automatiquement sur sa version liste pour l'impression, plus adaptée à la
 pagination papier. Le bouton peut être masqué (`CV.display.masquerImpression`).
 
+Dans la vue chronologique, la barre latérale permet de filtrer par **type**
+d'entrée (emploi, bénévolat, formation, projet… selon votre
+`CV.taxonomie.types`), plusieurs types à la fois. Le filtre s'applique aussi
+à l'impression : pratique pour sortir un CV centré sur les emplois.
+
 Les trois vues sont générées à partir des **mêmes données** — vous ne
 saisissez chaque expérience qu'une seule fois, en la rattachant aux
 milieux et compétences concernés.

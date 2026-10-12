@@ -1,5 +1,8 @@
 let currentView = 'timeline';
 let activeFilter = null;
+// Filtre de la vue chronologique par type d'entrée (CV.taxonomie.types),
+// à sélection multiple. Vide = tous les types. Conservé d'une vue à l'autre.
+let timelineTypesActifs = new Set();
 
 // ── Thème ─────────────────────────────────────────────────────────────────────
 // Presets de couleurs sélectionnables via CV.theme.preset dans data.js, avec
@@ -102,7 +105,7 @@ window.addEventListener('resize', () => {
 // puis on revient à l'affichage normal une fois l'aperçu fermé.
 window.addEventListener('beforeprint', () => {
   if (currentView === 'timeline') {
-    renderTimelineList(document.getElementById('content'), getAllItems());
+    renderTimelineList(document.getElementById('content'), getTimelineItems());
   }
 });
 window.addEventListener('afterprint', () => {
@@ -194,6 +197,7 @@ function renderView(view) {
   header.innerHTML = `<h2>${titles[view]}</h2>`;
 
   if (view === 'timeline') {
+    renderTypeFilters(filters);
     renderTimeline(content);
   } else if (view === 'milieux') {
     renderMilieuFilters(filters);
@@ -254,8 +258,50 @@ function tintColor(hex, whiteRatio) {
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
+// Entrées de la frise après le filtre par type. Un sous-engagement dont le
+// parent est filtré remonte au premier niveau plutôt que de disparaître avec
+// lui (ex. un projet rattaché à un engagement bénévole, filtre "Projet").
+function getTimelineItems() {
+  const all = getAllItems();
+  if (!timelineTypesActifs.size) return all;
+  const kept = all.filter(it => timelineTypesActifs.has(it.type));
+  const keptIds = new Set(kept.map(it => it.id));
+  return kept.map(it => (it.parent && !keptIds.has(it.parent)) ? { ...it, parent: undefined } : it);
+}
+
+// Seuls les types réellement utilisés sont proposés, avec leur nombre
+// d'entrées ; pas de filtre du tout s'il n'y a qu'un seul type.
+function renderTypeFilters(container) {
+  const types = CV.taxonomie.types;
+  const counts = {};
+  getAllItems().forEach(it => { if (it.type) counts[it.type] = (counts[it.type] || 0) + 1; });
+  const used = Object.entries(types).filter(([id]) => counts[id]);
+  if (used.length < 2) return;
+
+  let html = `<p class="filter-label">Filtrer — quels types ?</p>
+    <button class="filter-btn ${!timelineTypesActifs.size ? 'active' : ''}" data-filter="all">Tous les types</button>`;
+  used.forEach(([id, t]) => {
+    const on = timelineTypesActifs.has(id);
+    html += `<button class="filter-btn ${on ? 'active' : ''}" data-filter="${id}" aria-pressed="${on}"
+      style="--tag-color:${t.couleur}">${t.label}<span class="filter-count">${counts[id]}</span></button>`;
+  });
+
+  container.innerHTML = html;
+  container.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.filter;
+      if (id === 'all') timelineTypesActifs.clear();
+      else if (timelineTypesActifs.has(id)) timelineTypesActifs.delete(id);
+      else timelineTypesActifs.add(id);
+      // Tout cocher revient à ne rien filtrer : on repasse sur "Tous".
+      if (timelineTypesActifs.size === used.length) timelineTypesActifs.clear();
+      renderView('timeline');
+    });
+  });
+}
+
 function renderTimeline(container) {
-  const items = getAllItems();
+  const items = getTimelineItems();
   const mode = window.innerWidth < TIMELINE_MOBILE_BREAKPOINT ? 'list' : 'gantt';
   if (mode === 'list') {
     renderTimelineList(container, items);
