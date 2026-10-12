@@ -939,7 +939,10 @@ body {
   }
   .langues-title { display: none; }
   #langue-list { display: flex; flex-wrap: wrap; gap: 0 1rem; }
-  .langue-row { display: flex; gap: 0.25rem; }
+  /* .langue-row hérite de --sidebar-text (clair, prévu pour le fond sombre) :
+     illisible sur papier blanc sans couleur explicite. */
+  .langue-row { display: flex; gap: 0.25rem; color: #111; }
+  .langue-niveau { color: #555; }
 
   #main { max-width: 100%; padding: 0; }
   #view-header { margin-bottom: 0.8rem; }
