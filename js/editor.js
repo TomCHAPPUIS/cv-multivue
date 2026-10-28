@@ -347,6 +347,9 @@ function buildProfilSection() {
     ${dateField('p-naissance', 'Naissance (optionnel)', p.naissance)}
     <p class="hint">Sert uniquement à afficher des repères d'âge sur la frise chronologique. Année seule ou année + mois, jamais le jour. Laissez vide pour n'afficher aucun âge.</p>
 
+    ${textField('p-accroche', 'Accroche (optionnel)', p.accroche)}
+    <p class="hint">Grande phrase en tête de la page « En bref ». Vide : titre et sous-titre à la place.</p>
+
     ${textareaField('p-bio', 'Bio courte', p.bio)}
 
     <div class="field">
@@ -372,6 +375,7 @@ function buildProfilSection() {
   bind('p-titre', 'titre');
   bind('p-soustitre', 'sousTitre');
   bind('p-ville', 'ville');
+  bind('p-accroche', 'accroche');
   bind('p-bio', 'bio');
   bindDateField('p-naissance', v => {
     if (v == null) delete state.profil.naissance;

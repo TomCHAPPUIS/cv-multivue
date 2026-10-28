@@ -11,8 +11,13 @@ repo, éditez ce fichier, déployez — c'est tout.
 **[→ Voir la démo](https://tomchappuis.github.io/cv-multivue/)** (données
 d'exemple fictives)
 
-## Les trois vues
+## Les vues
 
+0. **En bref** (page d'accueil) — résumé calculé depuis vos données :
+   accroche (`profil.accroche`, sinon titre et sous-titre) et bio, un
+   chiffre par type d'entrée, ce qui est en cours (entrées sans date de
+   fin), et les compétences les plus mobilisées. Chaque élément mène à la
+   vue détaillée correspondante (frise filtrée, compétence filtrée).
 1. **Chronologique** — frise proportionnelle (position/durée proportionnelles
    au temps) : les périodes qui se chevauchent s'affichent côte à côte au
    lieu d'être noyées dans une liste. Précision au mois quand vous la
@@ -109,7 +114,8 @@ couches :
   (voir `lieu[].glossaire` plus bas) devient cliquable et ouvre sa
   définition dans une fenêtre, où qu'elle soit affichée.
 - **`CV.profil`** — votre identité publique (nom, titre, photo, ville,
-  pays, bio), affichée dans la barre latérale. `photo` accepte une URL,
+  pays, bio, accroche), affichée dans la barre latérale ; `bio` et
+  `accroche` (optionnelle) ouvrent la page « En bref ». `photo` accepte une URL,
   un chemin relatif, ou une image intégrée directement (data URI générée
   par `editor.html`). Volontairement **aucun téléphone/email ici** — voir
   `CV.contact` ci-dessous. `naissance` (optionnel, `1995` ou `"1995-04"`,

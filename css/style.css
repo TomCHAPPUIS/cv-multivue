@@ -27,7 +27,9 @@ body {
   background: var(--bg);
   color: var(--text);
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  /* minmax(0, …) : un contenu large (frise, tableau) défile dans sa colonne
+     au lieu d'élargir la page au-delà de l'écran (débordement sur mobile). */
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: 100vh;
   font-size: 14px;
   line-height: 1.55;
@@ -269,7 +271,7 @@ body {
    vues à base de texte (cartes/listes) — sinon elle reste cantonnée à une
    petite portion de l'écran malgré tout l'espace disponible à côté. */
 #main.main-wide {
-  max-width: 1600px;
+  max-width: none;
 }
 #view-header { margin-bottom: 2rem; }
 #view-header h2 {
@@ -277,6 +279,147 @@ body {
   font-weight: 600;
   letter-spacing: -0.025em;
 }
+.nav-label { margin: 0 0 0.3rem; }
+
+/* ── En bref (vue d'accueil) ─────────────────────────────────────────────── */
+.apercu-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 3rem;
+}
+.apercu-head-titre { flex: 1 1 26rem; min-width: 0; }
+.apercu-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+#view-header .apercu-head h2 {
+  font-size: clamp(1.8rem, 3.6vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  max-width: 24ch;
+}
+.apercu-bio {
+  flex: 1 1 22rem;
+  max-width: 52ch;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.apercu-chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  border: 2px solid var(--text);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+  background: var(--card-bg);
+}
+.apercu-chiffre {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 1rem 1.2rem;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text);
+  text-align: left;
+}
+.apercu-chiffre:last-child { border-right: none; }
+.apercu-chiffre:hover { background: var(--bg); }
+.apercu-chiffre-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.apercu-chiffre-valeur {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.apercu-colonnes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem;
+  align-items: flex-start;
+}
+.apercu-bloc { flex: 2 1 20rem; min-width: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.apercu-bloc-large { flex: 3 1 30rem; }
+.apercu-titre {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.apercu-lien {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.apercu-lien:hover { color: var(--accent); }
+.apercu-liste { display: flex; flex-direction: column; gap: 0.5rem; }
+.apercu-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1.1rem;
+  padding: 0.85rem 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.apercu-ligne-date { flex: 0 0 6.5rem; font-size: 0.8rem; font-weight: 700; }
+.apercu-ligne-corps { flex: 1 1 16rem; min-width: 0; display: flex; flex-direction: column; }
+.apercu-ligne-corps strong { font-size: 0.98rem; }
+.apercu-ligne-corps span { color: var(--text-muted); font-size: 0.85rem; }
+
+.apercu-competence {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem 1rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.2rem 0;
+  color: var(--text);
+  text-align: left;
+  font-weight: 700;
+}
+.apercu-competence:hover { color: var(--accent); }
+.apercu-competence-n { font-weight: 800; }
+.apercu-barre {
+  grid-column: 1 / -1;
+  height: 6px;
+  background: linear-gradient(to right, var(--text) var(--part), var(--border) var(--part));
+}
+.apercu-barre-max { background: linear-gradient(to right, var(--accent) var(--part), var(--border) var(--part)); }
+.apercu-note { font-size: 0.82rem; color: var(--text-muted); }
 
 /* ── Timeline ────────────────────────────────────────────────────────────── */
 .timeline {
@@ -892,7 +1035,7 @@ body {
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 800px) {
-  body { grid-template-columns: 1fr; }
+  body { grid-template-columns: minmax(0, 1fr); }
   #sidebar { height: auto; position: static; }
   #main { padding: 1.5rem 1.25rem; max-width: 100%; }
   .timeline::before { display: none; }
