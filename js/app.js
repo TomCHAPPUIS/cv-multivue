@@ -1,4 +1,4 @@
-let currentView = 'timeline';
+let currentView = 'apercu';
 let activeFilter = null;
 // Filtre de la vue chronologique par type d'entrée (CV.taxonomie.types),
 // à sélection multiple. Vide = tous les types. Conservé d'une vue à l'autre.
@@ -63,12 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderProfil();
     renderLangues();
-    renderView('timeline');
+    renderView('apercu');
 
     document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.view-btn[data-view]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
         activeFilter = null;
         renderView(btn.dataset.view);
       });
@@ -204,16 +202,25 @@ function renderView(view) {
 
   content.innerHTML = '';
   filters.innerHTML = '';
-  main.classList.toggle('main-wide', view === 'timeline');
+  // Les grilles de cartes et "En bref" profitent aussi des écrans larges
+  // (colonnes en auto-fill), pas seulement la frise.
+  main.classList.add('main-wide');
+  // Le bouton actif suit la vue, y compris quand on y arrive depuis "En bref"
+  // (chiffre clé, compétence) plutôt que par la navigation.
+  document.querySelectorAll('.view-btn[data-view]').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === view));
 
   const titles = {
     timeline:   'Parcours chronologique',
     milieux:    'Par milieux',
     competences:'Par compétence'
   };
-  header.innerHTML = `<h2>${titles[view]}</h2>`;
+  header.innerHTML = view === 'apercu' ? renderApercuHeader() : `<h2>${titles[view]}</h2>`;
 
-  if (view === 'timeline') {
+  if (view === 'apercu') {
+    renderTypeFilters(filters);
+    renderApercu(content);
+  } else if (view === 'timeline') {
     renderTypeFilters(filters);
     renderTimeline(content);
   } else if (view === 'milieux') {
@@ -223,6 +230,106 @@ function renderView(view) {
     renderCompetenceFilters(filters);
     renderCompetences(content);
   }
+}
+
+// ── En bref (vue d'accueil) ─────────────────────────────────────────────────
+// Résumé calculé depuis les données, sans champ supplémentaire obligatoire :
+// accroche (CV.profil.accroche, sinon titre + sous-titre) et bio, un chiffre
+// par type d'entrée, ce qui est en cours, les compétences les plus
+// mobilisées. Chaque élément mène à la vue détaillée correspondante.
+
+const APERCU_EN_COURS_MAX = 4;
+const APERCU_COMPETENCES_MAX = 5;
+
+function renderApercuHeader() {
+  const p = CV.profil;
+  const accroche = p.accroche || [p.titre, p.sousTitre].filter(Boolean).join(' — ') || p.nom;
+  return `<div class="apercu-head">
+    <div class="apercu-head-titre">
+      <p class="apercu-eyebrow">En bref</p>
+      <h2>${accroche}</h2>
+    </div>
+    ${p.bio ? `<p class="apercu-bio">${p.bio}</p>` : ''}
+  </div>`;
+}
+
+// Entrées sans date de fin (ou marquées actuelles), hors sous-engagements.
+function apercuEnCours() {
+  return getAllItems().filter(i => !i.parent && (i.actuel || i.fin == null));
+}
+
+// [{ key, label, n }] des compétences précises les plus citées, toutes
+// entrées confondues (sous-engagements compris).
+function apercuTopCompetences() {
+  const table = CV.taxonomie.competences;
+  const counts = {};
+  getAllItems().forEach(i => (i.competences || []).forEach(k => {
+    if (table[k]) counts[k] = (counts[k] || 0) + 1;
+  }));
+  return Object.entries(counts)
+    .map(([key, n]) => ({ key, label: table[key].label, n }))
+    .sort((a, b) => (b.n - a.n) || a.label.localeCompare(b.label, 'fr'))
+    .slice(0, APERCU_COMPETENCES_MAX);
+}
+
+function renderApercu(container) {
+  const types = CV.taxonomie.types;
+  const counts = {};
+  getAllItems().forEach(it => { if (it.type) counts[it.type] = (counts[it.type] || 0) + 1; });
+  const chiffres = Object.entries(types).filter(([id]) => counts[id]);
+
+  const enCours = apercuEnCours();
+  const top = apercuTopCompetences();
+  const max = top.length ? top[0].n : 1;
+
+  const ligneEnCours = (i) => {
+    const type = types[i.type] || { label: i.type, couleur: '#999' };
+    const org = i.organisation || i.etablissement || '';
+    return `<li class="apercu-ligne">
+      <span class="apercu-ligne-date">${formatPeriode(i, true)}</span>
+      <span class="apercu-ligne-corps"><strong>${i.titre}</strong>${org ? `<span>${org}</span>` : ''}</span>
+      <span class="badge-type sm" style="--type-color:${type.couleur}">${type.label}</span>
+    </li>`;
+  };
+
+  container.innerHTML = `
+    ${chiffres.length ? `<section class="apercu-chiffres" aria-label="Chiffres clés">
+      ${chiffres.map(([id, t]) => `<button class="apercu-chiffre" data-type="${id}">
+        <span class="apercu-chiffre-label">${t.label}</span>
+        <span class="apercu-chiffre-valeur">${counts[id]}</span>
+      </button>`).join('')}
+    </section>` : ''}
+    <div class="apercu-colonnes">
+      ${enCours.length ? `<section class="apercu-bloc apercu-bloc-large">
+        <h3 class="apercu-titre">En ce moment <button class="apercu-lien" data-vue="timeline">Tout le parcours</button></h3>
+        <ul class="apercu-liste">${enCours.slice(0, APERCU_EN_COURS_MAX).map(ligneEnCours).join('')}</ul>
+        ${enCours.length > APERCU_EN_COURS_MAX
+          ? `<button class="apercu-lien" data-vue="timeline">Et ${enCours.length - APERCU_EN_COURS_MAX} autre${enCours.length - APERCU_EN_COURS_MAX > 1 ? 's' : ''} en cours</button>` : ''}
+      </section>` : ''}
+      ${top.length ? `<section class="apercu-bloc">
+        <h3 class="apercu-titre">Compétences les plus mobilisées</h3>
+        <ul class="apercu-liste">${top.map((c, idx) => `<li>
+          <button class="apercu-competence" data-competence="${c.key}">
+            <span>${c.label}</span><span class="apercu-competence-n">${c.n}</span>
+            <span class="apercu-barre${idx === 0 ? ' apercu-barre-max' : ''}" style="--part:${Math.round(c.n / max * 100)}%" aria-hidden="true"></span>
+          </button>
+        </li>`).join('')}</ul>
+        <p class="apercu-note">Nombre d'entrées où la compétence est mobilisée.</p>
+      </section>` : ''}
+    </div>`;
+
+  container.querySelectorAll('.apercu-chiffre').forEach(btn => btn.addEventListener('click', () => {
+    timelineTypesActifs = new Set([btn.dataset.type]);
+    renderView('timeline');
+  }));
+  container.querySelectorAll('.apercu-lien').forEach(btn => btn.addEventListener('click', () => {
+    timelineTypesActifs.clear();
+    renderView(btn.dataset.vue);
+  }));
+  container.querySelectorAll('.apercu-competence').forEach(btn => btn.addEventListener('click', () => {
+    activeFilter = btn.dataset.competence;
+    renderView('competences');
+  }));
 }
 
 // ── Timeline ─────────────────────────────────────────────────────────────────
