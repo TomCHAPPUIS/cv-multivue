@@ -965,3 +965,92 @@ body {
 
   a { color: #111; text-decoration: none; }
 }
+
+/* ── Preset "suisse" ─────────────────────────────────────────────────────────
+   Seul preset qui change la forme en plus des couleurs (voir THEME_PRESETS
+   dans app.js) : Archivo, encre noire, accent rouge, angles droits, filets à
+   la place des ombres, sidebar claire séparée par un filet. Aucune structure
+   modifiée : uniquement des surcharges sous [data-theme="suisse"], réservées
+   à l'écran sauf police/couleurs/angles (l'impression garde ses règles). */
+[data-theme="suisse"] {
+  --text: #0a0a0a;
+  --text-muted: #525252;
+  --sidebar-muted: #525252;
+  --border: #d4d4d4;
+  --card-bg: #ffffff;
+  --shadow: none;
+  --radius: 0;
+}
+[data-theme="suisse"] body {
+  font-family: Archivo, 'Helvetica Neue', Arial, sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+[data-theme="suisse"] :is(.card, .card-compact, .tl-bar-card, .tl-child-bar, .tl-popover,
+  .tl-detail-popover .card, .badge-type, .badge-placeholder, .tag, .comp-skill-btn,
+  .count-badge, .preview-chip, .tl-bar-expand, .tl-age-label, .glossary-modal-panel,
+  .timeline-card > .tl-children-list, .cv-error-screen li, .view-btn, .filter-btn,
+  .contact-form input, .contact-form textarea, .contact-form button) {
+  border-radius: 0;
+}
+[data-theme="suisse"] .card-titre { font-weight: 700; }
+[data-theme="suisse"] .section-header h3 { font-weight: 800; letter-spacing: -0.015em; }
+[data-theme="suisse"] .badge-type { font-weight: 700; }
+
+@media screen {
+  /* Sidebar claire, filet noir à droite */
+  [data-theme="suisse"] #sidebar {
+    border-right: 2px solid var(--text);
+    scrollbar-color: #c4c4c4 transparent;
+  }
+  [data-theme="suisse"] .profile-header h1 {
+    color: var(--text);
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+  [data-theme="suisse"] .profile-header .titre-pro { color: var(--text-muted); font-weight: 600; }
+  [data-theme="suisse"] .contact-form input,
+  [data-theme="suisse"] .contact-form textarea { background: #fff; border: 1px solid #8a8a8a; }
+  [data-theme="suisse"] .contact-form button { color: #fff; font-weight: 700; }
+  [data-theme="suisse"] .view-btn { color: var(--text); font-weight: 500; }
+  [data-theme="suisse"] .view-btn:hover { background: #f5f5f5; color: var(--text); }
+  [data-theme="suisse"] .view-btn.active { background: var(--text); color: #fff; font-weight: 700; }
+  [data-theme="suisse"] #btn-print { border-top: 1px solid var(--border); }
+  [data-theme="suisse"] :is(.filter-label, .langues-title) {
+    color: var(--text);
+    font-weight: 700;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--text);
+  }
+  [data-theme="suisse"] .filter-group-label { color: var(--text); font-weight: 700; }
+  [data-theme="suisse"] .filter-btn { color: var(--text); }
+  [data-theme="suisse"] .filter-btn:hover { background: #f5f5f5; color: var(--text); }
+  [data-theme="suisse"] .filter-btn.active { background: #f5f5f5; color: var(--text); font-weight: 700; }
+  [data-theme="suisse"] .sidebar-footer { border-top: 1px solid var(--border); }
+
+  /* Contenu : titres noirs et serrés, filets à la place des ombres */
+  [data-theme="suisse"] #view-header {
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--text);
+  }
+  [data-theme="suisse"] #view-header h2 {
+    font-size: clamp(1.75rem, 2.6vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  [data-theme="suisse"] :is(.comp-group-title, .milieu-sub-title) {
+    color: var(--text);
+    font-weight: 700;
+    border-bottom: 1px solid var(--text);
+    padding-bottom: 0.35rem;
+  }
+  [data-theme="suisse"] .comp-skill-btn:hover { border-color: var(--text); }
+  [data-theme="suisse"] .tag-tech { background: #f5f5f5; color: var(--text); border: 1px solid var(--border); }
+  [data-theme="suisse"] .tl-popover,
+  [data-theme="suisse"] .glossary-modal-panel { box-shadow: none; border: 2px solid var(--text); }
+  [data-theme="suisse"] .timeline-item::before { border-radius: 0; }
+}
+
+@media screen and (max-width: 800px) {
+  [data-theme="suisse"] #sidebar { border-right: 0; border-bottom: 2px solid var(--text); }
+}

@@ -208,7 +208,7 @@ function allLieuTypes() {
 
 function buildThemeSection() {
   const c = document.getElementById('section-theme');
-  const presets = ['ambre', 'ocean', 'foret', 'mono'];
+  const presets = ['ambre', 'ocean', 'foret', 'mono', 'suisse'];
   const lieuTypes = allLieuTypes();
   c.innerHTML = `
     <summary><h2>Apparence</h2></summary>

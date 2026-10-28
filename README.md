@@ -86,7 +86,9 @@ couches :
 
 - **`CV.theme`** — apparence du site, pour que votre instance ne ressemble
   pas à celle de tout le monde. `preset` : `"ambre"` (défaut) / `"ocean"` /
-  `"foret"` / `"mono"`. Pour aller plus loin, `overrides` permet de
+  `"foret"` / `"mono"` / `"suisse"` (le seul qui change aussi la forme :
+  police Archivo chargée depuis Google Fonts, angles droits, filets noirs,
+  sidebar claire). Pour aller plus loin, `overrides` permet de
   surcharger des couleurs individuelles par-dessus le preset (ex.
   `overrides: { accent: "#2563eb" }`) — clés disponibles : `accent`, `bg`,
   `sidebarBg`, `sidebarText` (codes hexadécimaux).

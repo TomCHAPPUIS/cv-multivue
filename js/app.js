@@ -16,18 +16,35 @@ const THEME_PRESETS = {
   ambre: { accent: '#e06b3a', bg: '#f4f2ee', sidebarBg: '#1a1a18', sidebarText: '#e2ddd5' },
   ocean: { accent: '#2563eb', bg: '#eaf1fa', sidebarBg: '#0b2540', sidebarText: '#d7e6f5' },
   foret: { accent: '#15803d', bg: '#eaf5ec', sidebarBg: '#0e2818', sidebarText: '#d7ecdd' },
-  mono:  { accent: '#525252', bg: '#f2f2f2', sidebarBg: '#181818', sidebarText: '#e4e4e4' }
+  mono:  { accent: '#525252', bg: '#f2f2f2', sidebarBg: '#181818', sidebarText: '#e4e4e4' },
+  // "suisse" change aussi la forme, pas seulement les couleurs : police
+  // Archivo, angles droits, filets noirs, sidebar claire (bloc
+  // [data-theme="suisse"] de style.css).
+  suisse: {
+    accent: '#d52b1e', bg: '#ffffff', sidebarBg: '#ffffff', sidebarText: '#0a0a0a',
+    fontHref: 'https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap'
+  }
 };
 
 function applyTheme() {
   const t = (CV && CV.theme) || {};
-  const preset = THEME_PRESETS[t.preset] || THEME_PRESETS.ambre;
+  const nom = THEME_PRESETS[t.preset] ? t.preset : 'ambre';
+  const preset = THEME_PRESETS[nom];
   const vars = { ...preset, ...(t.overrides || {}) };
-  const root = document.documentElement.style;
+  const html = document.documentElement;
+  html.dataset.theme = nom;
+  const root = html.style;
   if (vars.accent) root.setProperty('--accent', vars.accent);
   if (vars.bg) root.setProperty('--bg', vars.bg);
   if (vars.sidebarBg) root.setProperty('--sidebar-bg', vars.sidebarBg);
   if (vars.sidebarText) root.setProperty('--sidebar-text', vars.sidebarText);
+  if (preset.fontHref && !document.getElementById('theme-font')) {
+    const link = document.createElement('link');
+    link.id = 'theme-font';
+    link.rel = 'stylesheet';
+    link.href = preset.fontHref;
+    document.head.appendChild(link);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
